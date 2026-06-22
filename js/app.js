@@ -214,11 +214,11 @@ function renderWeekSummary(weeks,capTotal){weekSummary.innerHTML=weeks.map(w=>{c
 function renderConsultantLoad(weeks){
   const rows=capacityRows(weeks);
   const cols=consultantLoadGridColumns(weeks.length);
-  consultantLoad.innerHTML=`<div class="load-head consultant-grid" style="grid-template-columns:${cols}"><div>Consultor</div><div>Prom. Trim.</div>${weeks.map(w=>`<div title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</div>`).join('')}<div>Disponible</div></div>`+
-    rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));const avg=r.values.length?Math.round(r.values.reduce((s,v)=>s+v.hours,0)/r.values.length):0;return `<div class="load-row consultant-grid" style="grid-template-columns:${cols}"><div class="consultant-name"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div><div class="pill avg ${pillClass(avg,r.capacity)}">${avg}h</div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</div>`).join('')}<div class="available-cell"><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')
+  consultantLoad.innerHTML=`<div class="load-head consultant-grid" style="grid-template-columns:${cols}"><div>Consultor</div>${weeks.map(w=>`<div title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</div>`).join('')}<div>Disponible</div></div>`+
+    rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));return `<div class="load-row consultant-grid" style="grid-template-columns:${cols}"><div class="consultant-name"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</div>`).join('')}<div class="available-cell"><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')
 }
 function consultantLoadGridColumns(weekCount){
-  return `minmax(175px,1.25fr) minmax(105px,.8fr) repeat(${weekCount}, minmax(96px,.85fr)) minmax(105px,.8fr)`;
+  return `minmax(150px,1.05fr) repeat(${weekCount}, minmax(82px,.75fr)) minmax(94px,.7fr)`;
 }
 function capacityOverloads(weeks){const items=[];capacityRows(weeks).forEach(r=>r.values.forEach(v=>{const cap=num(r.capacity);const hours=num(v.hours);if(!cap)return;const pct=Math.round(hours/cap*100);if(hours>cap)items.push({level:'over',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:hours-cap,pct});else if(hours>=cap*.9)items.push({level:'warn',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:0,pct});}));return items}
 function renderCapacityAlerts(weeks){
