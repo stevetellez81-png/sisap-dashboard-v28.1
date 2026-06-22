@@ -123,7 +123,7 @@ async function loadAll(){try{
   DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
-function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderUsers();}
+function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderUsers();renderSidebarStatusWidget();}
 function fillSelects(){
   fill('clientCountry',DB.countries,'País','code',x=>countryLabel(x.code));fill('clientCommercial',activeCommercials(),'Comercial','id',x=>x.name);
   fill('userRole',DB.roles,'Rol','id',x=>x.name);
@@ -145,6 +145,7 @@ function fill(id,items,ph,val,txt){const e=document.getElementById(id);if(!e)ret
 function fillStatic(id,ph,items){const e=document.getElementById(id);if(!e)return;const c=e.value;e.innerHTML=`<option value="">${ph}</option>`+items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');e.value=c}
 function renderDashboard(){
   renderDashboardDateControls();
+  updateQuarterRangeLabel();
   const projects=dashboardProjects();
   const totalProjects=projects.length;
   const activeProjectList=projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()!=='finalizado');
@@ -165,8 +166,31 @@ function renderDashboard(){
   if(typeof kpiRisk!=='undefined')animateNumber(kpiRisk,risk);
   animateNumber(kpiOver,overloaded);
   if(typeof kpiPendingHours!=='undefined')animateNumber(kpiPendingHours,Math.round(pending),'h');
-  renderWeekSummary(weeks,capTotal);renderConsultantLoad(weeks);renderCapacityAlerts(weeks);renderCountryCards(projects);renderProjectAlerts(activeProjectList);renderAnalystProjectCounts(activeProjectList);
+  updateGlobalCompliance(activeProjectList,risk,overloaded);renderWeekSummary(weeks,capTotal);renderConsultantLoad(weeks);renderCapacityAlerts(dashboardAlertWeeks());renderCountryCards(projects);renderProjectAlerts(activeProjectList);renderAnalystProjectCounts(activeProjectList);renderSidebarStatusWidget();
 }
+
+function updateQuarterRangeLabel(){
+  const el=document.getElementById('quarterRangeLabel');if(!el)return;
+  const from=v('dashboardFrom'),to=v('dashboardTo'),year=v('dashboardYear');
+  if(from&&to){el.textContent=`${fmtShort(from)} - ${fmtShort(to)}`;return;}
+  if(year){el.textContent=`Año ${year}`;return;}
+  el.textContent='Vista acumulada de cartera';
+}
+function fmtShort(d){const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('es-NI',{month:'short',day:'numeric',year:'numeric'}).replace('.', '');}
+function updateGlobalCompliance(projects,risk,overloaded){
+  const el=document.getElementById('globalComplianceBadge');if(!el)return;
+  const total=Math.max(projects.length,1);
+  const score=Math.max(0,Math.round(100-((risk/total)*45)-(overloaded*6)));
+  el.textContent=score+'%';
+  el.className='compliance-badge '+(score>=85?'green':score>=70?'amber':'red');
+}
+function renderSidebarStatusWidget(){
+  const box=document.getElementById('sidebarStatusWidget');if(!box)return;
+  const counts={};DB.projects.forEach(p=>{const st=normalizeProjectStatus(p.status)||'Sin estado';counts[st]=(counts[st]||0)+1});
+  const total=Object.values(counts).reduce((s,n)=>s+n,0)||1;
+  box.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([st,n])=>`<div class="status-mini-row"><span>${esc(st)}</span><b>${n}</b><i style="width:${Math.round(n/total*100)}%"></i></div>`).join('')||'<small>Sin proyectos</small>';
+}
+
 function renderDashboardDateControls(){
   const year=document.getElementById('dashboardYear');
   if(!year||year.options.length>1)return;
@@ -187,11 +211,19 @@ function dashboardProjects(){
 function projectDate(p){const raw=p.start_date||p.created_at||p.fecha_ingreso||p.end_date;const d=raw?new Date(raw):null;return d&&!isNaN(d)?d:null}
 function projectYear(p){const d=projectDate(p);return d?d.getFullYear():null}
 function renderWeekSummary(weeks,capTotal){weekSummary.innerHTML=weeks.map(w=>{const h=sumWeek(w.id);const p=new Set(DB.loads.filter(l=>l.week_id===w.id&&num(l.planned_hours)>0&&isActiveLoad(l)).map(l=>l.project_id)).size;const pct=capTotal?Math.round(h/capTotal*100):0;return `<div class="week-card"><h4>${esc(w.week_label)}</h4><small>${p} proyectos</small><strong>${Math.round(h)}h</strong><div class="bar"><div style="width:${Math.min(pct,100)}%"></div></div><small>${pct}% de capacidad equipo</small></div>`}).join('')}
-function renderConsultantLoad(weeks){const rows=capacityRows(weeks);consultantLoad.innerHTML=`<div class="load-head"><div>Consultor</div>${weeks.map(w=>`<div title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</div>`).join('')}<div>Disponible</div></div>`+rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));return `<div class="load-row"><div><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}">${Math.round(v.hours)}h</div>`).join('')}<div><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')}
+function renderConsultantLoad(weeks){
+  const rows=capacityRows(weeks);
+  const cols=consultantLoadGridColumns(weeks.length);
+  consultantLoad.innerHTML=`<div class="load-head consultant-grid" style="grid-template-columns:${cols}"><div>Consultor</div><div>Prom. Trim.</div>${weeks.map(w=>`<div title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</div>`).join('')}<div>Disponible</div></div>`+
+    rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));const avg=r.values.length?Math.round(r.values.reduce((s,v)=>s+v.hours,0)/r.values.length):0;return `<div class="load-row consultant-grid" style="grid-template-columns:${cols}"><div class="consultant-name"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div><div class="pill avg ${pillClass(avg,r.capacity)}">${avg}h</div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</div>`).join('')}<div class="available-cell"><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')
+}
+function consultantLoadGridColumns(weekCount){
+  return `minmax(175px,1.25fr) minmax(105px,.8fr) repeat(${weekCount}, minmax(96px,.85fr)) minmax(105px,.8fr)`;
+}
 function capacityOverloads(weeks){const items=[];capacityRows(weeks).forEach(r=>r.values.forEach(v=>{const cap=num(r.capacity);const hours=num(v.hours);if(!cap)return;const pct=Math.round(hours/cap*100);if(hours>cap)items.push({level:'over',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:hours-cap,pct});else if(hours>=cap*.9)items.push({level:'warn',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:0,pct});}));return items}
 function renderCapacityAlerts(weeks){
-  const alerts=capacityOverloads(weeks).sort((a,b)=>b.pct-a.pct);
-  capacityAlerts.innerHTML=alerts.map(a=>`<div class="alert-card ${a.level==='warn'?'warn':'over'}"><div><strong>${esc(a.name)}</strong><span>${esc(a.week)}</span></div><div class="alert-metric"><b>${Math.round(a.hours)}h / ${Math.round(a.capacity)}h</b><small>${a.pct}%${a.level==='over'?` · Exceso ${Math.round(a.excess)}h`:''}</small></div></div>`).join('')||'<small>Sin alertas</small>'
+  const alerts=capacityOverloads(weeks).sort((a,b)=>a.level===b.level?b.pct-a.pct:a.level==='over'?-1:1);
+  capacityAlerts.innerHTML=alerts.map(a=>`<div class="alert-card ${a.level==='warn'?'warn':'over'}"><div class="alert-icon">${a.level==='over'?'!':'⚠'}</div><div><strong>${esc(a.name)}</strong><span>${esc(shortWeek(a.week))} · ${a.level==='over'?'Crítica':'Advertencia'}</span></div><div class="alert-metric"><b>${Math.round(a.hours)}h / ${Math.round(a.capacity)}h</b><small>${a.pct}%${a.level==='over'?` · Exceso ${Math.round(a.excess)}h`:''}</small></div><button class="mini-btn blue" onclick="document.querySelector('[data-view=load]')?.click()">Ver detalles y reasignar</button></div>`).join('')||'<small>Sin alertas para la semana corriente</small>'
 }
 function renderCountryCards(projects=DB.projects){const counts={};projects.forEach(p=>{const code=normalizeCountry(p.country_code);counts[code]=(counts[code]||0)+1});countryCards.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([code,total])=>{const c=country(code);return `<div class="country"><div class="flag">${flagFor(code)}</div><strong>${code}</strong><small>${c.name||code}</small><b>${total}<br>proyectos</b></div>`}).join('')}
 function renderProjectAlerts(projects=DB.projects){
@@ -317,7 +349,42 @@ function selectHtml(type,i,items,value){const onchange=type==='analyst'?`loadRow
   if(r.error){console.error(r.error);return toast(r.error.message)}
   await loadAll();toast('Proyección guardada y actualizada')
 }
-async function saveWeek(){const payload={week_label:v('weekLabel'),start_date:v('weekStart'),end_date:v('weekEnd')};if(!payload.week_label||!payload.start_date||!payload.end_date)return toast('Complete la semana');const r=await db.from('weeks').insert([payload]);if(r.error)return toast(r.error.message);weekLabel.value='';weekStart.value='';weekEnd.value='';await loadAll()}function renderWeeks(){weeksTable.innerHTML=DB.weeks.map(w=>`<tr><td>${esc(w.week_label)}</td><td>${fmt(w.start_date)}</td><td>${fmt(w.end_date)}</td><td><button class="mini-btn delete" onclick="deleteWeek('${w.id}')">Eliminar</button></td></tr>`).join('')}async function deleteWeek(id){const w=DB.weeks.find(x=>x.id===id);if(!w)return;if(!confirm(`¿Eliminar la semana "${w.week_label}"?`))return;if(DB.loads.some(l=>l.week_id===id)){alert('No puede eliminarse porque tiene cargas registradas.');return;}const {error}=await db.from('weeks').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
+async function saveWeek(){
+  const month=Number(v('weekMonth'));
+  const year=Number(v('weekYear'));
+  if(!month||!year)return toast('Seleccione mes y año');
+  const payload=generateWeeksForMonth(year,month);
+  const existing=new Set(DB.weeks.map(w=>norm(w.week_label)));
+  const rows=payload.filter(w=>!existing.has(norm(w.week_label)));
+  if(rows.length===0)return toast('Las semanas de ese mes ya existen');
+  const r=await db.from('weeks').insert(rows);
+  if(r.error)return toast(r.error.message);
+  await loadAll();toast(`${rows.length} semanas generadas automáticamente`)
+}
+function generateWeeksForMonth(year,month){
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const first=new Date(year,month-1,1);
+  const last=new Date(year,month,0);
+  const rows=[];
+  let start=new Date(first);
+  let i=1;
+  while(start<=last){
+    const end=new Date(start);
+    end.setDate(end.getDate()+6);
+    if(end>last)end.setTime(last.getTime());
+    rows.push({
+      week_label:`Semana ${i} - ${monthNames[month-1]} ${year}`,
+      start_date:toISODate(start),
+      end_date:toISODate(end)
+    });
+    start=new Date(end);
+    start.setDate(start.getDate()+1);
+    i++;
+  }
+  return rows;
+}
+function toISODate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function renderWeeks(){weeksTable.innerHTML=DB.weeks.map(w=>`<tr><td>${esc(w.week_label)}</td><td>${fmt(w.start_date)}</td><td>${fmt(w.end_date)}</td><td><button class="mini-btn delete" onclick="deleteWeek('${w.id}')">Eliminar</button></td></tr>`).join('')}async function deleteWeek(id){const w=DB.weeks.find(x=>x.id===id);if(!w)return;if(!confirm(`¿Eliminar la semana "${w.week_label}"?`))return;if(DB.loads.some(l=>l.week_id===id)){alert('No puede eliminarse porque tiene cargas registradas.');return;}const {error}=await db.from('weeks').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
 function renderUsers(){usersTable.innerHTML=DB.users.map(u=>{const views=[u.can_dashboard?'Dashboard':'',u.can_clients?'Clientes':'',u.can_analysts?'Analistas':'',u.can_projects?'Proyectos':'',u.can_load?'Carga':'',u.can_weeks?'Semanas':'',u.can_users?'Usuarios':''].filter(Boolean).join(', ');return `<tr><td><strong>${esc(u.full_name)}</strong></td><td>${esc(u.email)}</td><td>${esc(u.roles?.name||'-')}</td><td><span class="badge ${u.status==='Activo'?'green':'red'}">${esc(u.status)}</span></td><td>${esc(views)}</td><td class="actions"><button class="mini-btn" onclick="editAppUser('${u.id}')">Editar</button><button class="mini-btn delete" onclick="disableAppUser('${u.id}')">Inactivar</button></td></tr>`}).join('')}
 async function saveAppUser(){const id=userId.value,email=v('userEmail'),password=v('userPassword');const payload={email,full_name:v('userName'),role_id:v('userRole')||null,status:v('userStatus'),can_dashboard:permDashboard.checked,can_clients:permClients.checked,can_analysts:permAnalysts.checked,can_projects:permProjects.checked,can_load:permLoad.checked,can_weeks:permWeeks.checked,can_users:permUsers.checked};if(!payload.email||!payload.full_name)return toast('Nombre y correo requeridos');if(!id&&!password)return toast('Contraseña inicial requerida');if(!id){const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:payload.full_name}}});if(error)return toast(error.message);payload.auth_user_id=data.user?.id||null;}const r=id?await db.from('app_users').update(payload).eq('id',id):await db.from('app_users').insert([payload]);if(r.error)return toast(r.error.message);clearUserForm();await loadAll();toast('Usuario guardado')}
 function editAppUser(id){const u=DB.users.find(x=>x.id===id);userId.value=u.id;userName.value=u.full_name||'';userEmail.value=u.email||'';userPassword.value='';userRole.value=u.role_id||'';userStatus.value=u.status||'Activo';permDashboard.checked=!!u.can_dashboard;permClients.checked=!!u.can_clients;permAnalysts.checked=!!u.can_analysts;permProjects.checked=!!u.can_projects;permLoad.checked=!!u.can_load;permWeeks.checked=!!u.can_weeks;permUsers.checked=!!u.can_users}async function disableAppUser(id){await db.from('app_users').update({status:'Inactivo'}).eq('id',id);await loadAll()}function clearUserForm(){userId.value='';userName.value='';userEmail.value='';userPassword.value='';userRole.value='';userStatus.value='Activo';permDashboard.checked=true;permClients.checked=false;permAnalysts.checked=false;permProjects.checked=true;permLoad.checked=true;permWeeks.checked=false;permUsers.checked=false}
@@ -450,7 +517,16 @@ function pillClass(h,c){if(h>=c)return'red';if(h>=c*.9)return'yellow';return'gre
     .sort((a,b)=>String(a.role)==='Líder'?-1:String(b.role)==='Líder'?1:0)
     .map(l=>`${l.analysts?.name||'Sin nombre'} (${l.role||'Apoyo'}${l.allocation_pct?` ${Math.round(num(l.allocation_pct))}%`:''})`)
     .join(', ')
-}function percent(p){const h=num(p.contracted_hours||p.estimated_hours);return h?num(p.consumed_hours)/h*100:0}function country(code){const clean=normalizeCountry(code);return DB.countries.find(c=>c.code===clean)||{code:clean,name:clean,flag:flagFor(clean)}}function countryLabel(code){const clean=normalizeCountry(code);const c=country(clean);return `${clean} · ${c.name||clean}`}function normalizeCountry(code){const clean=String(code||'').trim().toUpperCase();const map={NIC:'NI',RD:'DO',SLV:'SV',SVL:'SV',HD:'HN',GI:'GT',PANAMA:'PA','PANAMÁ':'PA'};return map[clean]||clean}function flagFor(code){const clean=normalizeCountry(code);const known=['NI','GT','PA','DO','SV','HN','CR','MX','PY','CO','PE','US','ES','AR','BR','CL','EC','UY','VE','BO','CA'];if(known.includes(clean))return `<img class="flag-img" src="assets/flags/${clean}.svg" alt="${clean}" loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'flag-fallback\'>🏳️</span>')">`;return '<span class="flag-fallback">🏳️</span>'}function shortWeek(label){
+}function percent(p){const h=num(p.contracted_hours||p.estimated_hours);return h?num(p.consumed_hours)/h*100:0}function country(code){const clean=normalizeCountry(code);return DB.countries.find(c=>c.code===clean)||{code:clean,name:clean,flag:flagFor(clean)}}function countryLabel(code){const clean=normalizeCountry(code);const c=country(clean);return `${clean} · ${c.name||clean}`}function normalizeCountry(code){const clean=String(code||'').trim().toUpperCase();const map={NIC:'NI',RD:'DO',SLV:'SV',SVL:'SV',HD:'HN',GI:'GT',PANAMA:'PA','PANAMÁ':'PA'};return map[clean]||clean}function flagFor(code){const clean=normalizeCountry(code);const known=['NI','GT','PA','DO','SV','HN','CR','MX','PY','CO','PE','US','ES','AR','BR','CL','EC','UY','VE','BO','CA'];if(known.includes(clean))return `<img class="flag-img" src="assets/flags/${clean}.svg" alt="${clean}" loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'flag-fallback\'>🏳️</span>')">`;return '<span class="flag-fallback">🏳️</span>'}function dashboardAlertWeeks(){const w=currentWeek();return w?[w]:displayWeeks().slice(-1)}
+function currentWeek(){
+  const today=new Date();today.setHours(12,0,0,0);
+  const weeks=displayWeeks();
+  const current=weeks.find(w=>{const start=new Date(w.start_date+'T00:00:00');const end=new Date(w.end_date+'T23:59:59');return today>=start&&today<=end;});
+  if(current)return current;
+  const future=weeks.find(w=>new Date(w.start_date+'T00:00:00')>today);
+  return future||weeks[weeks.length-1]||null;
+}
+function shortWeek(label){
   const meses={enero:'Ene',febrero:'Feb',marzo:'Mar',abril:'Abr',mayo:'May',junio:'Jun',julio:'Jul',agosto:'Ago',septiembre:'Sep',octubre:'Oct',noviembre:'Nov',diciembre:'Dic'};
   const txt=String(label||'').toLowerCase();
   const sem=txt.match(/semana\s*(\d+)/i);
