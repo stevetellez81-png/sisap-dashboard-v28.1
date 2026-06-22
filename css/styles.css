@@ -1,0 +1,248 @@
+:root{--red:#d9272e;--dark:#111;--line:#e3e6ea;--muted:#687083;--green:#dff6e8;--yellow:#fff1cc;--pink:#fde8e8}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef0f3;color:#191d27}.hidden{display:none!important}.app-shell{display:flex}.sidebar{width:260px;position:fixed;min-height:100vh;background:linear-gradient(180deg,#090909,#242424);padding:24px;color:white}.brand-frame{border:5px solid var(--red);border-bottom:0;border-radius:24px 24px 0 0;padding:16px;margin-bottom:24px}.brand-row{display:flex;gap:14px;align-items:center}.brand-s{width:42px;height:42px;border:2px solid var(--red);border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:900}.brand-row h1{margin:0;font-size:24px}.brand-row p{margin:3px 0 0;font-size:12px}.user-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px;margin-bottom:16px}.user-box small{display:block;color:#cfd2d8;margin-top:4px}.nav{width:100%;padding:15px 16px;margin-bottom:10px;border:1px solid transparent;border-radius:14px;background:transparent;color:white;text-align:left;font-weight:700;cursor:pointer}.nav.active,.nav:hover{background:rgba(217,39,46,.2);border-color:var(--red)}.logout{width:100%;margin-top:16px;background:#fff;color:#111}.main{margin-left:260px;width:calc(100% - 260px);padding:26px}.top,.panel{background:white;border-radius:22px;box-shadow:0 18px 42px rgba(0,0,0,.06)}.top{padding:24px 30px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center}.top h2{margin:0;font-size:30px}.top p{margin:6px 0 0;color:var(--muted)}.btn{border:0;border-radius:14px;padding:13px 18px;font-weight:900;cursor:pointer}.btn.red{background:var(--red);color:white}.btn.dark{background:#2a2d33;color:white}.btn.full{width:100%;margin-top:14px}.view{display:none}.view.active{display:block}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:18px}.kpi{background:white;border-radius:20px;padding:22px;border-left:5px solid #111;box-shadow:0 18px 42px rgba(0,0,0,.06)}.kpi.danger{border-left-color:var(--red)}.kpi span{color:var(--muted);font-size:14px}.kpi strong{display:block;font-size:36px;margin-top:8px}.grid-3{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:18px}.grid-2{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.panel{padding:22px;margin-bottom:18px}.panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-title h3{margin:0;font-size:22px}.panel-title small,.muted{color:var(--muted)}.week-card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;background:#fafbfc}.week-card h4{margin:0 0 10px}.week-card strong{font-size:30px}.bar{height:12px;background:#edf0f3;border-radius:99px;overflow:hidden;margin:10px 0}.bar div{height:100%;background:linear-gradient(90deg,#111,var(--red));border-radius:99px}.load-table{overflow:auto;max-height:380px}.load-head,.load-row{display:grid;grid-template-columns:1.1fr repeat(3,.8fr) .8fr;gap:10px;align-items:center}.load-head{background:#111;color:white;border-radius:14px;padding:14px;font-weight:900;font-size:13px}.load-row{padding:10px;border-bottom:1px solid var(--line)}.pill{border-radius:12px;padding:10px;text-align:center;font-weight:900}.pill.green{background:var(--green);color:#08713f}.pill.yellow{background:var(--yellow);color:#8a6200}.pill.red{background:var(--pink);color:#b91c1c}.alerts{max-height:380px;overflow:auto}.alert{border-left:5px solid var(--red);background:var(--pink);padding:14px;border-radius:14px;margin-bottom:12px}.alert.warn{border-left-color:#d99a00;background:#fff8e6}.country-cards{display:flex;gap:14px;flex-wrap:wrap}.country{width:120px;text-align:center;border:1px solid var(--line);border-radius:18px;background:#fafafa;padding:16px}.country .flag{font-size:34px}.country strong{display:block;font-size:28px;margin-top:6px}.country small{display:block;color:var(--muted)}.two-cols{display:grid;grid-template-columns:.75fr 1.25fr;gap:20px}.form-panel label{display:block;margin:12px 0 6px;color:#555c6b;font-weight:800;font-size:14px}input,select,textarea{width:100%;padding:13px;border:1px solid #d8dde5;border-radius:14px;background:white;font-size:14px}textarea{min-height:90px}.row-actions{display:flex;gap:12px;margin-top:16px}.table-scroll{overflow:auto;max-height:650px;border-radius:14px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th{background:#111;color:white;text-align:left;padding:14px;font-size:13px;position:sticky;top:0;z-index:1}td{padding:12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}.badge{display:inline-block;padding:7px 11px;border-radius:999px;background:#eef0f3;font-weight:900;font-size:12px}.badge.green{background:var(--green);color:#08713f}.badge.red{background:var(--pink);color:#b91c1c}.badge.blue{background:#e8efff;color:#1d4ed8}.actions{display:flex;gap:8px}.mini-btn{border:0;border-radius:12px;background:#111;color:white;padding:9px 12px;font-weight:900;cursor:pointer}.delete,.danger{background:var(--red)}.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}.projects-table{max-height:700px}.matrix{max-height:560px}.permission-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.permission-grid label{margin:0;background:#f4f5f7;padding:10px;border-radius:12px}.login-screen{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#111,#2b2b2b)}.login-card{width:420px;background:#fff;border-radius:24px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)}.login-card h2{margin:0}.login-card label{display:block;margin:14px 0 6px;font-weight:800}.hint{background:#f6f7f9;border-radius:14px;padding:12px;margin-top:14px;font-size:13px;color:#4b5563}.toast{position:fixed;right:24px;bottom:24px;background:#111;color:white;padding:14px 18px;border-radius:14px;display:none}.toast.show{display:block}@media(max-width:1100px){.kpis,.grid-3,.grid-2,.two-cols,.filters{grid-template-columns:1fr}.sidebar{position:static;width:100%;min-height:auto}.main{margin-left:0;width:100%}.app-shell{display:block}}
+
+/* ===== SISAP V25 UX ===== */
+body{background:radial-gradient(circle at top left,#f9fafb,#eef0f3 38%,#e7e9ee)}
+.top,.panel,.kpi{animation:softIn .35s ease both}.view.active{animation:fadeSlide .28s ease both}@keyframes softIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes fadeSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kpis{grid-template-columns:repeat(8,1fr)}.kpi{position:relative;overflow:hidden;transition:.2s ease}.kpi:hover{transform:translateY(-4px);box-shadow:0 24px 48px rgba(0,0,0,.1)}.kpi:after{content:"";position:absolute;right:-35px;top:-35px;width:95px;height:95px;background:rgba(217,39,46,.08);border-radius:50%}.kpi small{display:block;color:var(--muted);margin-top:3px;font-size:12px}.kpi.warning{border-left-color:#d99a00}.kpi.warning strong{color:#9a6500}.kpi.danger strong{color:var(--red)}
+.project-toolbar{align-items:flex-start}.project-filters{grid-template-columns:2fr 1fr 1fr 1fr}.multi-filter{position:relative}.multi-btn{width:100%;padding:13px 14px;border:1px solid #d8dde5;border-radius:14px;background:#fff;text-align:left;font-weight:700;color:#222;cursor:pointer;display:flex;justify-content:space-between;align-items:center}.multi-btn small{color:var(--muted);font-weight:600}.multi-menu{display:none;position:absolute;top:calc(100% + 8px);left:0;width:310px;max-height:330px;background:#fff;border:1px solid #dde2ea;border-radius:18px;box-shadow:0 24px 50px rgba(0,0,0,.18);z-index:40;padding:12px;overflow:hidden}.multi-filter.open .multi-menu{display:block;animation:dropIn .18s ease both}@keyframes dropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}.multi-search{margin-bottom:10px;padding:11px!important;border-radius:12px!important}.multi-list{max-height:230px;overflow:auto;padding-right:4px}.multi-option{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;font-size:13px;cursor:pointer}.multi-option:hover{background:#f4f6f8}.multi-option input{width:auto}.multi-actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px;border-top:1px solid #edf0f3;padding-top:10px}.mini-link{border:0;background:#f3f4f6;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer}.mini-link.red{background:#fde8e8;color:#b91c1c}
+.projects-table tr{transition:.16s ease}.projects-table tbody tr:hover{background:#fafafa;transform:scale(1.002)}.projects-table tr.overloaded{background:#fde8e8}.projects-table tr.risk{background:#fff7e6}.country-cell{font-weight:900;white-space:nowrap}.project-name{font-weight:800}.client-name{font-weight:900}.pct-pill{display:inline-block;padding:7px 10px;border-radius:999px;font-weight:900;font-size:12px}.pct-ok{background:#dff6e8;color:#08713f}.pct-risk{background:#fff1cc;color:#8a6200}.pct-over{background:#fde8e8;color:#b91c1c}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.48);display:grid;place-items:center;z-index:100;padding:24px}.modal-card{background:#fff;border-radius:24px;width:min(980px,96vw);max-height:92vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.35);animation:modalIn .22s ease both}@keyframes modalIn{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}.modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 24px;border-bottom:1px solid var(--line)}.modal-head h3{margin:0;font-size:24px}.modal-head small{color:var(--muted)}.icon-btn{width:38px;height:38px;border:0;border-radius:12px;background:#111;color:#fff;font-size:24px;cursor:pointer}.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:22px}.form-grid label{font-weight:800;color:#555c6b;font-size:13px}.form-grid input,.form-grid select,.form-grid textarea{margin-top:6px}.full-span{grid-column:1/-1}.modal-actions{padding:0 22px 22px}.toast{z-index:200}
+@media(max-width:1300px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.kpis,.project-filters,.form-grid{grid-template-columns:1fr}.multi-menu{width:100%}}
+
+
+/* ===== SISAP V26.1 fixes ===== */
+.projects-panel,.project-toolbar,.project-filters{overflow:visible!important}.table-scroll.projects-table{overflow:auto}.multi-menu{z-index:9999;max-height:380px}.multi-list{max-height:245px;overflow-y:auto}.multi-actions{position:sticky;bottom:0;background:#fff}.analyst-counts{display:grid;gap:10px}.analyst-count-row{display:grid;grid-template-columns:1fr auto;gap:4px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fafafa}.analyst-count-row small{grid-column:1/-1;color:var(--muted)}.dashboard-filters{padding:14px 18px}.dashboard-filters .filters{margin-bottom:0;grid-template-columns:1fr 1fr 1fr auto}.actions{white-space:nowrap}
+
+/* ===== V26.1.1 Project assignments ===== */
+.assignment-editor{border:1px solid var(--line);border-radius:18px;background:#fafbfc;padding:16px;margin-top:4px}
+.assignment-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.assignment-title small{color:var(--muted);font-size:12px}
+.assignment-title.small{margin-top:14px}
+.assignment-row{display:grid;grid-template-columns:1.5fr .5fr auto;gap:10px;align-items:end;margin-bottom:10px}
+.assignment-row label{margin:0}
+.support-list:empty:before{content:'Sin consultores de apoyo asignados.';display:block;color:var(--muted);font-size:13px;padding:8px 0}
+@media(max-width:760px){.assignment-row{grid-template-columns:1fr}}
+
+
+/* ===== SISAP V26.1.2 Flags ===== */
+.flag-img{width:24px;height:17px;object-fit:cover;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.16);vertical-align:middle;margin-right:6px;background:#fff}
+.country .flag .flag-img{width:42px;height:30px;margin:0 0 6px 0;border-radius:6px}
+.flag-fallback{display:inline-block;width:24px;text-align:center;margin-right:6px}
+
+
+/* ===== SISAP V27 ===== */
+.logo-brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:92px;justify-content:center;overflow:hidden}
+.sisap-logo{display:block;max-width:170px;width:100%;height:auto;object-fit:contain}
+.login-card .sisap-logo{max-width:230px;margin:0 auto 4px auto}
+.login-card .logo-brand{align-items:center;text-align:center}
+.logo-brand p{margin:0;font-size:12px;color:inherit;font-weight:700;letter-spacing:.2px}
+.load-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.load-filters .multi-menu{z-index:9999}
+.projects-panel,.panel{overflow:visible}
+.table-scroll{position:relative}
+.multi-actions{position:sticky;bottom:0;background:#fff;z-index:2}
+.flag-img{width:24px;height:16px;object-fit:cover;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.14);vertical-align:middle;margin-right:6px;background:#fff}
+.country .flag-img{width:42px;height:28px;margin:0 auto 6px auto;display:block;border-radius:5px}
+@media(max-width:760px){.load-filters{grid-template-columns:1fr}.sisap-logo{max-width:150px}}
+
+
+/* ===== SISAP V27.1 Brand Fix ===== */
+.brand-frame.logo-brand{
+  display:none;
+}
+.sidebar-brand{
+  background:linear-gradient(180deg,#ffffff 0%,#f5f5f5 100%);
+  border-radius:16px;
+  margin:0 0 22px 0;
+  padding:18px 14px;
+  text-align:center;
+  border:1px solid rgba(217,39,46,.18);
+  box-shadow:0 10px 28px rgba(0,0,0,.16);
+  color:#111;
+  overflow:hidden;
+}
+.sidebar-brand::after{
+  content:"";
+  display:block;
+  width:70%;
+  height:3px;
+  margin:12px auto 0;
+  border-radius:10px;
+  background:#d9272e;
+}
+.sidebar-brand .sisap-logo{
+  width:180px;
+  max-width:100%;
+  height:auto;
+  display:block;
+  margin:0 auto 12px auto;
+  object-fit:contain;
+}
+.sidebar-brand .brand-title{
+  color:#111;
+  font-size:15px;
+  font-weight:800;
+  margin-bottom:4px;
+}
+.sidebar-brand .brand-version{
+  color:#d9272e;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+}
+.login-card .sidebar-brand,
+.sidebar-brand.login-brand{
+  margin:0 0 20px 0;
+  box-shadow:0 8px 22px rgba(0,0,0,.08);
+}
+.login-card .sidebar-brand .sisap-logo,
+.sidebar-brand.login-brand .sisap-logo{
+  width:220px;
+}
+@media(max-width:760px){
+  .sidebar-brand .sisap-logo{width:160px;}
+  .login-card .sidebar-brand .sisap-logo{width:190px;}
+}
+
+/* ===== SISAP V27.2 Sobrecarga legible ===== */
+.kpi.danger,
+.kpi-overload{
+  background:linear-gradient(135deg,#d9272e 0%,#b91c1c 100%) !important;
+  color:#fff !important;
+  border-left-color:#7f1111 !important;
+  box-shadow:0 18px 42px rgba(217,39,46,.22) !important;
+}
+.kpi.danger span,
+.kpi.danger small,
+.kpi.danger strong,
+.kpi-overload span,
+.kpi-overload small,
+.kpi-overload strong{
+  color:#fff !important;
+  position:relative;
+  z-index:2;
+}
+.kpi.danger:after,
+.kpi-overload:after{
+  background:rgba(255,255,255,.14) !important;
+}
+.kpi-overload strong{
+  font-size:38px;
+  line-height:1;
+  margin-top:10px;
+}
+.alert-card{
+  border:1px solid #f2c7c7;
+  border-left:5px solid var(--red);
+  background:#fff7f7;
+  border-radius:16px;
+  padding:14px 16px;
+  margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:center;
+}
+.alert-card.warn{
+  border-color:#f4d58b;
+  border-left-color:#d99a00;
+  background:#fff9e9;
+}
+.alert-card strong{
+  display:block;
+  color:#1f2937;
+  font-size:15px;
+}
+.alert-card span{
+  display:block;
+  color:#687083;
+  font-size:12px;
+  margin-top:3px;
+}
+.alert-metric{
+  text-align:right;
+  min-width:120px;
+}
+.alert-metric b{
+  display:block;
+  color:#b91c1c;
+  font-size:15px;
+}
+.alert-card.warn .alert-metric b{
+  color:#8a6200;
+}
+.alert-metric small{
+  display:block;
+  color:#687083;
+  margin-top:3px;
+  font-size:12px;
+}
+.sidebar-brand{
+  background:linear-gradient(180deg,#fff 0%,#fafafa 100%) !important;
+  border:1px solid rgba(217,39,46,.22) !important;
+}
+.sidebar-brand .sisap-logo{
+  width:190px !important;
+  max-height:78px;
+  object-fit:contain;
+}
+.sidebar-brand .brand-title{
+  margin-top:4px;
+}
+
+/* ===== SISAP V28 KPIs ===== */
+@media(max-width:1500px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:1fr}}
+
+
+/* ===== SISAP V28.1 Semana dinámica y tabla fija ===== */
+.matrix{
+  max-height:650px;
+  overflow:auto;
+}
+.matrix table{
+  min-width:1100px;
+}
+.matrix table thead th{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:#111;
+  color:#fff;
+  white-space:nowrap;
+}
+.matrix table th:first-child,
+.matrix table td:first-child{
+  position:sticky;
+  left:0;
+  z-index:15;
+  background:#fff;
+  box-shadow:2px 0 0 rgba(0,0,0,.05);
+}
+.matrix table th:first-child{
+  z-index:30;
+  background:#111;
+  color:#fff;
+}
+.matrix table td:first-child select{
+  min-width:180px;
+}
+.matrix table td:nth-child(2) select{
+  min-width:220px;
+}
+.matrix table td:nth-child(3) select{
+  min-width:260px;
+}
+.matrix input[type=number]{
+  min-width:74px;
+  text-align:right;
+}
+.load-head{
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.load-head div{
+  white-space:nowrap;
+}

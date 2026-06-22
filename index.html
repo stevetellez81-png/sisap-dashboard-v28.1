@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SISAP Dashboard V28</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<section id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">Dashboard Cumplimiento</div><div class="brand-version">V28</div></div>
+    <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
+    <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
+    <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
+    <button class="btn red full" onclick="login()">Ingresar</button>
+    
+  </div>
+</section>
+
+<div id="appShell" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">Dashboard Cumplimiento</div><div class="brand-version">V28</div></div>
+    <div class="user-box"><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div>
+    <nav>
+      <button class="nav active" data-view="dashboard" data-permission="can_dashboard">Dashboard</button>
+      <button class="nav" data-view="clients" data-permission="can_clients">Clientes</button>
+      <button class="nav" data-view="commercials" data-permission="can_clients">Comerciales</button>
+      <button class="nav" data-view="analysts" data-permission="can_analysts">Analistas</button>
+      <button class="nav" data-view="projects" data-permission="can_projects">Proyectos</button>
+      <button class="nav" data-view="load" data-permission="can_load">Cargabilidad</button>
+      <button class="nav" data-view="weeks" data-permission="can_weeks">Semanas</button>
+      <button class="nav" data-view="users" data-permission="can_users">Usuarios</button>
+    </nav>
+    <button class="btn logout" onclick="logout()">Cerrar sesión</button>
+  </aside>
+  <main class="main">
+    <header class="top"><div><h2 id="pageTitle">Dashboard Ejecutivo</h2><p id="pageSubtitle">Cartera, capacidad semanal y alertas automáticas</p></div><button class="btn red" onclick="loadAll()">Actualizar</button></header>
+
+    <section id="dashboard" class="view active">
+      <div class="panel dashboard-filters"><div class="filters"><select id="dashboardYear" onchange="renderDashboard()"><option value="">Todos los años</option></select><input id="dashboardFrom" type="date" onchange="renderDashboard()"><input id="dashboardTo" type="date" onchange="renderDashboard()"><button class="btn dark" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">Limpiar fechas</button></div></div>
+      <div class="kpis executive-kpis">
+        <div class="kpi"><span>Total proyectos</span><strong id="kpiTotalProjects">0</strong><small>Cartera completa</small></div>
+        <div class="kpi"><span>Proyectos activos</span><strong id="kpiProjects">0</strong><small>No finalizados</small></div>
+        <div class="kpi"><span>Finalizados</span><strong id="kpiCompletedProjects">0</strong><small>Cerrados</small></div>
+        <div class="kpi"><span>Clientes reales</span><strong id="kpiClients">0</strong><small>Cartera única</small></div>
+        <div class="kpi"><span>Analistas</span><strong id="kpiAnalysts">0</strong><small>Equipo activo</small></div>
+        <div class="kpi warning"><span>En riesgo</span><strong id="kpiRisk">0</strong><small>≥ 90% consumo</small></div>
+        <div class="kpi danger"><span>Sobrecargados</span><strong id="kpiOver">0</strong><small>Consumo mayor a capacidad</small></div>
+        <div class="kpi"><span>Horas pendientes</span><strong id="kpiPendingHours">0h</strong><small>Por ejecutar</small></div>
+      </div>
+      <div class="grid-3"><div class="panel"><div class="panel-title"><h3>Resumen por semana</h3><small>Horas y proyectos</small></div><div id="weekSummary"></div></div><div class="panel wide"><div class="panel-title"><h3>Carga por consultor</h3><small>Base para asignar</small></div><div id="consultantLoad" class="load-table"></div></div><div class="panel"><div class="panel-title"><h3>Alertas de capacidad</h3><small>Acción sugerida</small></div><div id="capacityAlerts" class="alerts"></div></div></div>
+      <div class="grid-2"><div class="panel"><div class="panel-title"><h3>Proyectos por país</h3><small>Distribución regional</small></div><div id="countryCards" class="country-cards"></div></div><div class="panel"><div class="panel-title"><h3>Proyectos por analista</h3><small>Líder / Apoyo</small></div><div id="analystProjectCounts" class="analyst-counts"></div></div></div><div class="panel"><div class="panel-title"><h3>Alertas automáticas</h3><small>Prioridad ejecutiva</small></div><div id="projectAlerts" class="alerts"></div></div>
+    </section>
+
+    <section id="clients" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Administración de clientes</h3><input type="hidden" id="clientId"><label>Nombre</label><input id="clientName"><label>País</label><select id="clientCountry"></select><label>Comercial</label><select id="clientCommercial"></select><label>Estado</label><select id="clientStatus"><option>Activo</option><option>Inactivo</option></select><label>Observación</label><textarea id="clientObservation"></textarea><div class="row-actions"><button class="btn red" onclick="saveClient()">Guardar</button><button class="btn dark" onclick="clearClient()">Nuevo</button></div></div><div class="panel"><div class="panel-title"><h3>Clientes</h3><small>Maestros</small></div><div class="table-scroll"><table><thead><tr><th>Cliente</th><th>País</th><th>Comercial</th><th>Estado</th><th>Proyectos</th><th>Acciones</th></tr></thead><tbody id="clientsTable"></tbody></table></div></div></div></section>
+
+    <section id="commercials" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Comerciales</h3><input type="hidden" id="commercialId"><label>Nombre</label><input id="commercialName"><label>Estado</label><select id="commercialStatus"><option>Activo</option><option>Inactivo</option></select><div class="row-actions"><button class="btn red" onclick="saveCommercial()">Guardar</button><button class="btn dark" onclick="clearCommercial()">Nuevo</button></div></div><div class="panel"><div class="panel-title"><h3>Lista de comerciales</h3><small>Catálogo comercial</small></div><div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Clientes</th><th>Proyectos</th><th>Acciones</th></tr></thead><tbody id="commercialsTable"></tbody></table></div></div></div></section>
+
+    <section id="analysts" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Analistas</h3><input type="hidden" id="analystId"><label>Nombre</label><input id="analystName"><label>Correo</label><input id="analystEmail"><label>Rol</label><input id="analystRole"><label>Capacidad semanal</label><input id="analystCapacity" type="number" value="44"><label>Estado</label><select id="analystStatus"><option>Activo</option><option>Inactivo</option></select><div class="row-actions"><button class="btn red" onclick="saveAnalyst()">Guardar</button><button class="btn dark" onclick="clearAnalyst()">Nuevo</button></div></div><div class="panel"><div class="panel-title"><h3>Analistas</h3><small>Capacidad y carga</small></div><div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Cap.</th><th>Proy.</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="analystsTable"></tbody></table></div></div></div></section>
+
+    <section id="projects" class="view">
+      <div class="panel projects-panel">
+        <div class="panel-title project-toolbar">
+          <div>
+            <h3>Tabla dinámica de proyectos</h3>
+            <small><span id="visibleProjects">0</span> registros visibles</small>
+          </div>
+          <button class="btn red" onclick="openProjectModal()">+ Nuevo proyecto</button>
+        </div>
+        <div class="filters project-filters">
+          <input id="projectSearch" oninput="renderProjects()" placeholder="Buscar cliente, proyecto, comercial, observación...">
+          <div id="filterAnalystBox" class="multi-filter"></div>
+          <div id="filterStatusBox" class="multi-filter"></div>
+          <div id="filterCountryBox" class="multi-filter"></div>
+        </div>
+        <div class="table-scroll projects-table">
+          <table>
+            <thead><tr><th><input type="checkbox"></th><th>País</th><th>Cliente</th><th>Proyecto</th><th>Horas</th><th>Consumidas</th><th>%</th><th>Analista</th><th>Estado</th><th>Observación</th><th>Acciones</th></tr></thead>
+            <tbody id="projectsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div id="projectModal" class="modal hidden">
+      <div class="modal-card project-modal-card">
+        <div class="modal-head">
+          <div><h3 id="projectModalTitle">Nuevo proyecto</h3><small>Crear o actualizar cartera de proyectos</small></div>
+          <button class="icon-btn" onclick="closeProjectModal()">×</button>
+        </div>
+        <input type="hidden" id="projectId">
+        <div class="form-grid">
+          <label>Cliente<select id="projectClient"></select></label>
+          <label>País<select id="projectCountry"></select></label>
+          <label>Comercial<select id="projectCommercial"></select></label>
+          <label>Estado<select id="projectStatus"><option>Asignado</option><option>En ejecución</option><option>En pausa</option><option>Finalizado</option><option>Activo</option></select></label>
+          <label>Proyecto<input id="projectName" placeholder="Nombre del proyecto"></label>
+          <label>Servicio<input id="projectServiceType" placeholder="PCI, ISO 27001, NIST, X-Analytics..."></label>
+          <label>Horas contratadas<input id="projectContractedHours" type="number" min="0" step="1"></label>
+          <label>Horas consumidas<input id="projectConsumedHours" type="number" min="0" step="1"></label>
+          <label>Prioridad<select id="projectPriority"><option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option></select></label>
+          <label>No. fuente<input id="projectSourceNo" type="number" min="0" step="1"></label>
+          <label class="full-span">Observación<textarea id="projectObservation"></textarea></label>
+          <div class="full-span assignment-editor">
+            <div class="assignment-title"><strong>Asignación de analistas</strong><small>Líder y apoyo se guardan en project_assignments</small></div>
+            <div class="assignment-row leader-row">
+              <label>Consultor líder<select id="projectLeaderAnalyst"></select></label>
+              <label>% asignación<input id="projectLeaderPct" type="number" min="0" max="100" step="1" value="100"></label>
+            </div>
+            <div class="assignment-title small"><strong>Consultores de apoyo</strong><button type="button" class="mini-btn" onclick="addSupportAssignment()">+ Agregar apoyo</button></div>
+            <div id="projectSupportRows" class="support-list"></div>
+          </div>
+        </div>
+        <div class="row-actions modal-actions">
+          <button class="btn red" onclick="saveProject()">Guardar proyecto</button>
+          <button class="btn dark" onclick="closeProjectModal()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <section id="load" class="view"><div class="panel"><div class="panel-title"><h3>Proyección semanal de carga</h3><small>Horas enteras</small></div><div class="filters load-filters"><input id="loadSearch" oninput="renderLoadMatrix()" placeholder="Buscar consultor, cliente o proyecto..."><div id="loadFilterAnalystBox" class="multi-filter"></div><div id="loadFilterClientBox" class="multi-filter"></div><div id="loadFilterStatusBox" class="multi-filter"></div></div><div class="table-scroll matrix"><table><thead id="loadHead"></thead><tbody id="loadBody"></tbody></table></div><div class="row-actions"><button class="btn red" onclick="saveLoadMatrix()">Guardar proyección</button><button class="btn dark" onclick="addLoadRow()">Agregar fila</button></div></div></section>
+
+    <section id="weeks" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Crear semana</h3><label>Nombre</label><input id="weekLabel" placeholder="Semana 22 - 26 Junio 2026"><label>Inicio</label><input id="weekStart" type="date"><label>Fin</label><input id="weekEnd" type="date"><button class="btn red" onclick="saveWeek()">Guardar semana</button></div><div class="panel"><div class="panel-title"><h3>Semanas</h3><small>Columnas dinámicas</small></div><div class="table-scroll"><table><thead><tr><th>Semana</th><th>Inicio</th><th>Fin</th><th>Acciones</th></tr></thead><tbody id="weeksTable"></tbody></table></div></div></div></section>
+
+    <section id="users" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Usuarios</h3><input type="hidden" id="userId"><label>Nombre</label><input id="userName"><label>Correo</label><input id="userEmail" type="email"><label>Contraseña inicial</label><input id="userPassword" type="password"><label>Rol</label><select id="userRole"></select><label>Estado</label><select id="userStatus"><option>Activo</option><option>Inactivo</option></select><div class="permission-grid"><label><input type="checkbox" id="permDashboard"> Dashboard</label><label><input type="checkbox" id="permClients"> Clientes</label><label><input type="checkbox" id="permAnalysts"> Analistas</label><label><input type="checkbox" id="permProjects"> Proyectos</label><label><input type="checkbox" id="permLoad"> Cargabilidad</label><label><input type="checkbox" id="permWeeks"> Semanas</label><label><input type="checkbox" id="permUsers"> Usuarios</label></div><div class="row-actions"><button class="btn red" onclick="saveAppUser()">Guardar usuario</button><button class="btn dark" onclick="clearUserForm()">Nuevo</button></div></div><div class="panel"><div class="panel-title"><h3>Usuarios del sistema</h3><small>Permisos por vista</small></div><div class="table-scroll"><table><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Vistas</th><th>Acciones</th></tr></thead><tbody id="usersTable"></tbody></table></div></div></div></section>
+  </main>
+</div>
+<div id="toast" class="toast"></div><script src="js/supabase.js"></script><script src="js/app.js"></script>
+</body></html>
