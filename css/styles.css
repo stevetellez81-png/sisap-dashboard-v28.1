@@ -694,3 +694,17 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .matrix tbody tr:hover{background:#f8fafc}
 .matrix .mini-btn{padding:9px 12px}
 @media(max-width:900px){.load-filters{grid-template-columns:1fr}.load-actions-top{width:100%;justify-content:flex-start}}
+
+
+/* V29.6 UX fixes */
+.table-wrap thead th,.data-table thead th{position:sticky;top:0;z-index:20;background:#050505}
+.data-table{table-layout:fixed;width:100%}
+.data-table th:nth-child(2),.data-table td:nth-child(2){width:80px}
+.data-table th:nth-child(5),.data-table td:nth-child(5){width:70px}
+.data-table th:nth-child(6),.data-table td:nth-child(6){width:90px}
+.data-table th:nth-child(7),.data-table td:nth-child(7){width:80px}
+.data-table th:nth-child(9),.data-table td:nth-child(9){width:130px}
+.data-table th:nth-child(10),.data-table td:nth-child(10){width:auto}
+.data-table td:nth-child(10){white-space:normal;word-break:break-word}
+.actions{white-space:nowrap}
+.mini-btn{padding:6px 10px;border-radius:8px;border:0;cursor:pointer}
