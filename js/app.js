@@ -218,7 +218,8 @@ function renderConsultantLoad(weeks){
     rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));return `<div class="load-row consultant-grid" style="grid-template-columns:${cols}"><div class="consultant-name"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</div>`).join('')}<div class="available-cell"><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')
 }
 function consultantLoadGridColumns(weekCount){
-  return `minmax(150px,1.05fr) repeat(${weekCount}, minmax(82px,.75fr)) minmax(94px,.7fr)`;
+  // V29.2: columnas fijas y legibles para evitar cortes en 1366x768 y Full HD.
+  return `220px repeat(${weekCount}, 120px) 120px`;
 }
 function capacityOverloads(weeks){const items=[];capacityRows(weeks).forEach(r=>r.values.forEach(v=>{const cap=num(r.capacity);const hours=num(v.hours);if(!cap)return;const pct=Math.round(hours/cap*100);if(hours>cap)items.push({level:'over',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:hours-cap,pct});else if(hours>=cap*.9)items.push({level:'warn',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:0,pct});}));return items}
 function renderCapacityAlerts(weeks){
@@ -492,12 +493,13 @@ async function saveProject(){
 }
 async function deleteProject(id){
   const p=DB.projects.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`¿Eliminar proyecto "${p.name}"? Esta acción eliminará también sus asignaciones y cargas semanales.`))return;
+  if(!confirm(`¿Eliminar proyecto "${p.name}"? Esta acción eliminará también sus cargas semanales y asignaciones.`))return;
   try{
-    const delAssignments=await db.from('project_assignments').delete().eq('project_id',id);
-    if(delAssignments.error)throw delAssignments.error;
+    // V29.2: primero se eliminan las dependencias para evitar errores por llaves foráneas.
     const delLoads=await db.from('weekly_project_load').delete().eq('project_id',id);
     if(delLoads.error)throw delLoads.error;
+    const delAssignments=await db.from('project_assignments').delete().eq('project_id',id);
+    if(delAssignments.error)throw delAssignments.error;
     const delProject=await db.from('projects').delete().eq('id',id);
     if(delProject.error)throw delProject.error;
     await loadAll();toast('Proyecto eliminado correctamente');
