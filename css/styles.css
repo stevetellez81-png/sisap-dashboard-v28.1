@@ -705,3 +705,80 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .projects-table td:nth-child(10){overflow:visible !important;}
 .projects-table .actions,.projects-table td:last-child{min-width:170px !important;width:170px !important;}
 .projects-table .actions .mini-btn,.projects-table td:last-child .mini-btn{display:inline-block !important;margin:2px !important;white-space:nowrap !important;}
+
+/* ===== V29.11 Proyectos: layout final legible ===== */
+.projects-panel{overflow:hidden !important;}
+.projects-table{
+  width:100% !important;
+  overflow:auto !important;
+  max-height:calc(100vh - 310px) !important;
+}
+.projects-table table{
+  width:100% !important;
+  min-width:0 !important;
+  table-layout:fixed !important;
+}
+.projects-table th,
+.projects-table td{
+  padding:12px 10px !important;
+  vertical-align:top !important;
+  white-space:normal !important;
+}
+.projects-table th:nth-child(1),.projects-table td:nth-child(1){width:42px !important;text-align:center !important;}
+.projects-table th:nth-child(2),.projects-table td:nth-child(2){width:72px !important;}
+.projects-table th:nth-child(3),.projects-table td:nth-child(3){width:150px !important;}
+.projects-table th:nth-child(4),.projects-table td:nth-child(4){width:260px !important;}
+.projects-table th:nth-child(5),.projects-table td:nth-child(5){width:70px !important;text-align:center !important;}
+.projects-table th:nth-child(6),.projects-table td:nth-child(6){width:95px !important;text-align:center !important;}
+.projects-table th:nth-child(7),.projects-table td:nth-child(7){width:64px !important;text-align:center !important;}
+.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:175px !important;}
+.projects-table th:nth-child(9),.projects-table td:nth-child(9){width:112px !important;}
+.projects-table th:nth-child(11),.projects-table td:nth-child(11){width:160px !important;}
+.projects-table th:nth-child(10),.projects-table td:nth-child(10){width:auto !important;}
+.projects-table .project-status-cell{vertical-align:middle !important;}
+.projects-table .project-status-cell .badge{
+  max-width:105px !important;
+  padding:6px 10px !important;
+  font-size:11px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+}
+.projects-table .project-observation-cell{
+  min-width:360px !important;
+  white-space:normal !important;
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
+  line-height:1.35 !important;
+  font-size:13px !important;
+  color:#1f2937 !important;
+}
+.projects-table .project-actions-cell{
+  display:table-cell !important;
+  vertical-align:middle !important;
+  min-width:160px !important;
+  width:160px !important;
+  white-space:nowrap !important;
+  overflow:visible !important;
+}
+.projects-table .project-actions-cell .mini-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-width:66px !important;
+  height:34px !important;
+  padding:0 11px !important;
+  margin:0 3px 0 0 !important;
+  border-radius:10px !important;
+  font-size:12px !important;
+  white-space:nowrap !important;
+}
+.projects-table .client-name,
+.projects-table .project-name{
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
+}
+.projects-table tbody tr{height:auto !important;}
+.projects-table tbody tr:hover{background:#f8fafc !important;}
+@media(max-width:1400px){
+  .projects-table table{min-width:1320px !important;}
+}
