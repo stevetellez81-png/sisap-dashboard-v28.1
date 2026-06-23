@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V29.6</title>
+  <title>SISAP Dashboard V29.9</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.6</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.9</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.6</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.9</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -35,7 +35,7 @@
     <div class="sidebar-widget"><div class="sidebar-widget-title">Distribución por estado</div><div id="sidebarStatusWidget" class="status-widget-mini"><small>Cargando...</small></div></div><button class="btn logout" onclick="logout()">⎋ Cerrar sesión</button>
   </aside>
   <main class="main">
-    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance & Capacity v29.7</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
+    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance & Capacity v29.9</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
 
     <section id="dashboard" class="view active">
       <div class="panel dashboard-filters v29-filters"><div class="range-card"><strong>Rango trimestral</strong><span id="quarterRangeLabel">Seleccione periodo</span></div><div class="filters"><select id="dashboardYear" onchange="renderDashboard()"><option value="">Todos los años</option></select><input id="dashboardFrom" type="date" onchange="renderDashboard()"><input id="dashboardTo" type="date" onchange="renderDashboard()"><button class="btn dark" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">Limpiar fechas</button></div></div>

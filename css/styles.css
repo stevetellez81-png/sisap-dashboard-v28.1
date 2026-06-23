@@ -753,3 +753,80 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .heatmap-table thead th:first-child{z-index:25;background:#0d1322;}
 .heat-available.warn{background:#fff1cc;color:#8a5a00;}
 .heat-available.full{background:#fde2e2;color:#b42318;}
+
+
+/* V29.9 - Corrección real de tabla Proyectos: sin scroll horizontal, acciones visibles */
+.projects-panel{
+  height:calc(100vh - 150px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:560px;
+  overflow:hidden!important;
+}
+.projects-panel .project-toolbar,
+.projects-panel .project-filters{flex:0 0 auto;}
+.table-scroll.projects-table{
+  flex:1 1 auto!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border-radius:14px;
+  border:1px solid var(--line);
+}
+.projects-table table{
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+  border-collapse:collapse!important;
+}
+.projects-table th,
+.projects-table td{
+  box-sizing:border-box;
+  overflow:hidden;
+  font-size:13px;
+}
+.projects-table th{position:sticky;top:0;z-index:20;padding:11px 8px;white-space:nowrap;}
+.projects-table td{padding:10px 8px;line-height:1.22;vertical-align:middle;}
+.projects-table th:nth-child(1),.projects-table td:nth-child(1){width:3%;text-align:center;}
+.projects-table th:nth-child(2),.projects-table td:nth-child(2){width:5%;}
+.projects-table th:nth-child(3),.projects-table td:nth-child(3){width:10%;}
+.projects-table th:nth-child(4),.projects-table td:nth-child(4){width:16%;}
+.projects-table th:nth-child(5),.projects-table td:nth-child(5){width:4.5%;text-align:center;}
+.projects-table th:nth-child(6),.projects-table td:nth-child(6){width:6%;text-align:center;}
+.projects-table th:nth-child(7),.projects-table td:nth-child(7){width:4.5%;text-align:center;}
+.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:10%;}
+.projects-table th:nth-child(9),.projects-table td:nth-child(9){width:8%;}
+.projects-table th:nth-child(10),.projects-table td:nth-child(10){width:25%;}
+.projects-table th:nth-child(11),.projects-table td:nth-child(11){width:8%;text-align:right;}
+.project-name,.client-name{font-weight:800;white-space:normal!important;word-break:break-word;line-height:1.18;}
+.project-analysts{white-space:normal!important;word-break:break-word;line-height:1.15;}
+.project-observation{
+  white-space:normal!important;
+  overflow:hidden!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  line-height:1.25!important;
+  max-height:2.6em!important;
+  word-break:break-word!important;
+}
+.projects-table .actions{
+  display:flex!important;
+  gap:5px!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  white-space:nowrap!important;
+}
+.projects-table .actions .mini-btn{
+  padding:6px 8px!important;
+  border-radius:9px!important;
+  font-size:10.5px!important;
+  min-width:auto!important;
+}
+.projects-table .badge{padding:6px 9px!important;font-size:11px!important;white-space:nowrap;}
+.projects-table .pct-pill{padding:6px 8px!important;font-size:11px!important;}
+.country-cell{white-space:nowrap!important;font-weight:900;}
+@media(max-width:1200px){
+  .projects-table th,.projects-table td{font-size:12px;padding:8px 6px;}
+  .projects-table .actions .mini-btn{font-size:10px;padding:5px 6px!important;}
+}
