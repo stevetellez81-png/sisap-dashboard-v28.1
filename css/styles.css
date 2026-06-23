@@ -364,19 +364,34 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .matrix td:first-child{background:#fff;}
 .matrix th:first-child{z-index:6;background:#111;}
 
-/* Tabla de proyectos más compacta y legible */
-.projects-table table{width:max-content;min-width:100%;table-layout:fixed;}
-.projects-table th:nth-child(1),.projects-table td:nth-child(1){width:42px;min-width:42px;}
-.projects-table th:nth-child(2),.projects-table td:nth-child(2){width:82px;min-width:82px;}
-.projects-table th:nth-child(3),.projects-table td:nth-child(3){width:170px;min-width:170px;}
-.projects-table th:nth-child(4),.projects-table td:nth-child(4){width:330px;min-width:330px;}
-.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:180px;min-width:180px;}
-.projects-table th:nth-child(11),.projects-table td:nth-child(11){width:160px;min-width:160px;}
-.project-name,.client-name{
-  white-space:normal;
-  line-height:1.25;
-}
-.actions .mini-btn{padding:8px 12px;border-radius:11px;}
+/* ===== SISAP V29.8: Proyectos legible sin tabla aplastada ===== */
+.projects-panel{height:calc(100vh - 170px);display:flex;flex-direction:column;min-height:560px;}
+.projects-panel .project-toolbar{flex:0 0 auto;}
+.projects-panel .project-filters{flex:0 0 auto;}
+.table-scroll.projects-table{flex:1 1 auto;max-height:none;overflow:auto;border-radius:14px;border:1px solid var(--line);}
+.projects-table table{width:100%;min-width:1260px;table-layout:fixed;border-collapse:collapse;}
+.projects-table th{position:sticky;top:0;z-index:7;padding:10px 8px;font-size:12px;white-space:nowrap;}
+.projects-table td{padding:9px 8px;font-size:13px;line-height:1.22;vertical-align:middle;}
+.projects-table th:nth-child(1),.projects-table td:nth-child(1){width:38px;text-align:center;}
+.projects-table th:nth-child(2),.projects-table td:nth-child(2){width:70px;}
+.projects-table th:nth-child(3),.projects-table td:nth-child(3){width:150px;}
+.projects-table th:nth-child(4),.projects-table td:nth-child(4){width:230px;}
+.projects-table th:nth-child(5),.projects-table td:nth-child(5){width:70px;text-align:center;}
+.projects-table th:nth-child(6),.projects-table td:nth-child(6){width:92px;text-align:center;}
+.projects-table th:nth-child(7),.projects-table td:nth-child(7){width:72px;text-align:center;}
+.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:170px;}
+.projects-table th:nth-child(9),.projects-table td:nth-child(9){width:118px;}
+.projects-table th:nth-child(10),.projects-table td:nth-child(10){width:auto;min-width:240px;}
+.projects-table th:nth-child(11),.projects-table td:nth-child(11){width:132px;}
+.project-name,.client-name{white-space:normal;line-height:1.18;word-break:break-word;}
+.project-analysts{white-space:normal;line-height:1.15;word-break:break-word;}
+.project-observation{white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.22;max-height:2.6em;word-break:break-word;color:#30343d;}
+.projects-table .actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap;}
+.projects-table .actions .mini-btn{padding:7px 10px;border-radius:10px;font-size:11px;}
+.projects-table .pct-pill{padding:6px 9px;font-size:11px;}
+.projects-table .badge{padding:6px 10px;font-size:11px;white-space:nowrap;}
+.country-cell{font-weight:900;white-space:nowrap;}
+@media(max-width:1300px){.projects-table table{min-width:1160px}.projects-table th:nth-child(4),.projects-table td:nth-child(4){width:205px}.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:150px}.projects-table th:nth-child(10),.projects-table td:nth-child(10){min-width:220px}}
 
 @media(max-width:900px){
   .consultantLoadGrid{min-width:720px;}
