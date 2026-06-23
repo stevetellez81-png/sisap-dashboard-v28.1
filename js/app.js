@@ -213,13 +213,19 @@ function projectYear(p){const d=projectDate(p);return d?d.getFullYear():null}
 function renderWeekSummary(weeks,capTotal){weekSummary.innerHTML=weeks.map(w=>{const h=sumWeek(w.id);const p=new Set(DB.loads.filter(l=>l.week_id===w.id&&num(l.planned_hours)>0&&isActiveLoad(l)).map(l=>l.project_id)).size;const pct=capTotal?Math.round(h/capTotal*100):0;return `<div class="week-card"><h4>${esc(w.week_label)}</h4><small>${p} proyectos</small><strong>${Math.round(h)}h</strong><div class="bar"><div style="width:${Math.min(pct,100)}%"></div></div><small>${pct}% de capacidad equipo</small></div>`}).join('')}
 function renderConsultantLoad(weeks){
   const rows=capacityRows(weeks);
-  const cols=consultantLoadGridColumns(weeks.length);
-  consultantLoad.innerHTML=`<div class="load-head consultant-grid" style="grid-template-columns:${cols}"><div>Consultor</div>${weeks.map(w=>`<div title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</div>`).join('')}<div>Disponible</div></div>`+
-    rows.map(r=>{const min=Math.min(...r.values.map(v=>r.capacity-v.hours));return `<div class="load-row consultant-grid" style="grid-template-columns:${cols}"><div class="consultant-name"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong><br><small>Cap. ${r.capacity}h/sem</small></div>${r.values.map(v=>`<div class="pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</div>`).join('')}<div class="available-cell"><strong>${Math.max(0,Math.round(min))}h</strong></div></div>`}).join('')
-}
-function consultantLoadGridColumns(weekCount){
-  // V29.2: columnas fijas y legibles para evitar cortes en 1366x768 y Full HD.
-  return `220px repeat(${weekCount}, 120px) 120px`;
+  const headWeeks=weeks.map(w=>`<th title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</th>`).join('');
+  const bodyRows=rows.map(r=>{
+    const min=Math.min(...r.values.map(v=>r.capacity-v.hours));
+    const weekCells=r.values.map(v=>`<td><span class="heat-pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</span></td>`).join('');
+    const available=Math.max(0,Math.round(min));
+    return `<tr>
+      <td class="heat-consultant"><div class="heat-consultant-main"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong></div><small>Cap. ${Math.round(r.capacity)}h/sem</small></td>
+      ${weekCells}
+      <td><span class="heat-available ${available===0?'full':''}">${available}h</span></td>
+    </tr>`;
+  }).join('');
+
+  consultantLoad.innerHTML=`<div class="heatmap-shell"><table class="heatmap-table"><thead><tr><th>Consultor</th>${headWeeks}<th>Disponible</th></tr></thead><tbody>${bodyRows || '<tr><td colspan="10">Sin información de capacidad.</td></tr>'}</tbody></table></div>`;
 }
 function capacityOverloads(weeks){const items=[];capacityRows(weeks).forEach(r=>r.values.forEach(v=>{const cap=num(r.capacity);const hours=num(v.hours);if(!cap)return;const pct=Math.round(hours/cap*100);if(hours>cap)items.push({level:'over',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:hours-cap,pct});else if(hours>=cap*.9)items.push({level:'warn',analyst_id:r.id,name:r.name,week:v.week,hours,capacity:cap,excess:0,pct});}));return items}
 function renderCapacityAlerts(weeks){
