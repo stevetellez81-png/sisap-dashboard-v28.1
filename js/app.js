@@ -402,8 +402,47 @@ function closeMultiFilters(){document.querySelectorAll('.multi-filter').forEach(
 function setMultiValue(id,value,checked){const box=document.getElementById(id);if(!box)return;checked?box._state.add(String(value)):box._state.delete(String(value));box._onChange?.();}
 function selectAllMulti(id,all){const box=document.getElementById(id);if(!box)return;box._state.clear();if(all)box._items.forEach(x=>box._state.add(String(x[box._valKey])));box._onChange?.();fillSelects();document.getElementById(id)?.classList.add('open')}
 function filterMultiOptions(input){const q=input.value.toLowerCase();input.closest('.multi-menu').querySelectorAll('.multi-option').forEach(opt=>opt.style.display=opt.textContent.toLowerCase().includes(q)?'flex':'none')}
-function displayWeeks(){return DB.weeks.filter(w=>!String(w.week_label||'').toLowerCase().includes('cartera general'))}
-function animateNumber(el,value,suffix=''){if(!el)return;const start=Number(String(el.textContent).replace(/[^0-9.-]/g,''))||0;const end=Number(value)||0;const steps=18;let i=0;const timer=setInterval(()=>{i++;const v=Math.round(start+(end-start)*(i/steps));el.textContent=v.toLocaleString('es-NI')+suffix;if(i>=steps){clearInterval(timer);el.textContent=Math.round(end).toLocaleString('es-NI')+suffix}},16)}
+function displayWeeks(){
+  // V29.4: ventana móvil de semanas.
+  // Muestra siempre la semana actual + las 3 semanas anteriores.
+  // Si la fecha actual no cae dentro de ninguna semana, usa la siguiente semana futura;
+  // si no hay futuras, usa la última registrada. Así julio no rompe el dashboard, por una vez.
+  const weeks=[...DB.weeks]
+    .filter(w=>!String(w.week_label||'').toLowerCase().includes('cartera general') && w.start_date)
+    .sort((a,b)=>new Date(a.start_date+'T00:00:00')-new Date(b.start_date+'T00:00:00'));
+  if(!weeks.length)return [];
+  const today=new Date();today.setHours(12,0,0,0);
+  let currentIndex=weeks.findIndex(w=>{
+    const start=new Date(w.start_date+'T00:00:00');
+    const end=w.end_date?new Date(w.end_date+'T23:59:59'):new Date(start.getTime()+6*24*60*60*1000);
+    return today>=start && today<=end;
+  });
+  if(currentIndex===-1){
+    currentIndex=weeks.findIndex(w=>new Date(w.start_date+'T00:00:00')>today);
+    if(currentIndex===-1)currentIndex=weeks.length-1;
+  }
+  const startIndex=Math.max(0,currentIndex-3);
+  return weeks.slice(startIndex,currentIndex+1);
+}
+function animateNumber(el,value,suffix=''){
+  if(!el)return;
+  const start=Number(String(el.textContent).replace(/[^0-9.-]/g,''))||0;
+  const end=Number(value)||0;
+  const duration=650;
+  const started=performance.now();
+  el.classList.remove('number-pop');
+  void el.offsetWidth;
+  el.classList.add('number-pop');
+  function easeOutCubic(t){return 1-Math.pow(1-t,3)}
+  function tick(now){
+    const progress=Math.min((now-started)/duration,1);
+    const v=Math.round(start+(end-start)*easeOutCubic(progress));
+    el.textContent=v.toLocaleString('es-NI')+suffix;
+    if(progress<1)requestAnimationFrame(tick);
+    else el.textContent=Math.round(end).toLocaleString('es-NI')+suffix;
+  }
+  requestAnimationFrame(tick);
+}
 function openProjectModal(id=''){
   projectId.value=id||'';
   projectModalTitle.textContent=id?'Editar proyecto':'Nuevo proyecto';
