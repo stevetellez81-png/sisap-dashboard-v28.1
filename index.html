@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V29.2</title>
+  <title>SISAP Dashboard V29.12</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.2</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.12</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.2</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.12</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -35,7 +35,7 @@
     <div class="sidebar-widget"><div class="sidebar-widget-title">Distribución por estado</div><div id="sidebarStatusWidget" class="status-widget-mini"><small>Cargando...</small></div></div><button class="btn logout" onclick="logout()">⎋ Cerrar sesión</button>
   </aside>
   <main class="main">
-    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance & Capacity v29.2</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
+    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance & Capacity v29.12</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
 
     <section id="dashboard" class="view active">
       <div class="panel dashboard-filters v29-filters"><div class="range-card"><strong>Rango trimestral</strong><span id="quarterRangeLabel">Seleccione periodo</span></div><div class="filters"><select id="dashboardYear" onchange="renderDashboard()"><option value="">Todos los años</option></select><input id="dashboardFrom" type="date" onchange="renderDashboard()"><input id="dashboardTo" type="date" onchange="renderDashboard()"><button class="btn dark" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">Limpiar fechas</button></div></div>
@@ -49,7 +49,7 @@
         <div class="kpi danger"><span>Sobrecarga de Analistas</span><strong id="kpiOver">0</strong><small>&gt;100% capacidad asignada</small><i class="sparkline"></i><em class="kpi-change">+0% vs trim.</em></div>
         <div class="kpi"><span>Horas pendientes</span><strong id="kpiPendingHours">0h</strong><small>Por ejecutar</small><i class="sparkline"></i><em class="kpi-change">+0% vs trim.</em></div>
       </div>
-      <div class="grid-3"><div class="panel"><div class="panel-title"><h3>Weekly Project Hours vs. Capacity</h3><small>Horas asignadas contra capacidad</small></div><div id="weekSummary"></div></div><div class="panel wide"><div class="panel-title"><h3>Consultant Capacity Heatmap</h3><small>Promedio trimestral y carga semanal</small></div><div id="consultantLoad" class="load-table"></div></div><div class="panel"><div class="panel-title"><h3>Capacity Action Alerts</h3><small>Semana corriente / periodo activo</small></div><div id="capacityAlerts" class="alerts"></div></div></div>
+      <div class="grid-3"><div class="panel"><div class="panel-title"><div><h3>Weekly Project Hours vs. Capacity</h3><small>Horas asignadas contra capacidad</small></div><select id="dashboardWeekMonth" class="month-selector" onchange="renderDashboard()"></select></div><div id="weekSummary"></div></div><div class="panel wide"><div class="panel-title"><div><h3>Consultant Capacity Heatmap</h3><small>Promedio mensual y carga semanal</small></div><select id="dashboardHeatmapMonth" class="month-selector" onchange="dashboardWeekMonth.value=this.value;renderDashboard()"></select></div><div id="consultantLoad" class="load-table"></div></div><div class="panel"><div class="panel-title"><h3>Capacity Action Alerts</h3><small>Semana corriente / periodo activo</small></div><div id="capacityAlerts" class="alerts"></div></div></div>
       <div class="grid-2"><div class="panel"><div class="panel-title"><h3>Proyectos por país</h3><small>Distribución regional</small></div><div id="countryCards" class="country-cards"></div></div><div class="panel"><div class="panel-title"><h3>Proyectos por analista</h3><small>Líder / Apoyo</small></div><div id="analystProjectCounts" class="analyst-counts"></div></div></div><div class="panel"><div class="panel-title"><h3>Alertas automáticas</h3><small>Prioridad ejecutiva</small></div><div id="projectAlerts" class="alerts"></div></div>
     </section>
 
@@ -119,7 +119,7 @@
       </div>
     </div>
 
-    <section id="load" class="view"><div class="panel"><div class="panel-title"><div><h3>Proyección semanal de carga</h3><small>Planeación de capacidad: analista + proyecto + horas presupuestadas por semana</small></div><div class="load-actions-top"><button class="btn ghost" onclick="clearLoadFilters()">Limpiar filtros</button><button class="btn dark" onclick="loadAll()">Actualizar</button></div></div><div class="filters load-filters"><input id="loadSearch" oninput="renderLoadMatrix()" placeholder="Buscar consultor, cliente o proyecto..."><div id="loadFilterAnalystBox" class="multi-filter"></div><div id="loadFilterClientBox" class="multi-filter"></div><div id="loadFilterStatusBox" class="multi-filter"></div></div><div class="table-scroll matrix"><table><thead id="loadHead"></thead><tbody id="loadBody"></tbody></table></div><div class="row-actions"><button class="btn red" onclick="saveLoadMatrix()">Guardar proyección</button><button class="btn dark" onclick="addLoadRow()">Agregar fila</button></div></div></section>
+    <section id="load" class="view"><div class="panel"><div class="panel-title"><div><h3>Proyección semanal de carga</h3><small>Planeación de capacidad: analista + proyecto + horas presupuestadas por semana</small></div><div class="load-actions-top"><button class="btn ghost" onclick="clearLoadFilters()">Limpiar filtros</button><button class="btn dark" onclick="loadAll()">Actualizar</button></div></div><div class="filters load-filters"><select id="loadWeekMonth" class="month-selector" onchange="buildLoadRows();renderLoadMatrix()"></select><input id="loadSearch" oninput="renderLoadMatrix()" placeholder="Buscar consultor, cliente o proyecto..."><div id="loadFilterAnalystBox" class="multi-filter"></div><div id="loadFilterClientBox" class="multi-filter"></div><div id="loadFilterStatusBox" class="multi-filter"></div></div><div class="table-scroll matrix"><table><thead id="loadHead"></thead><tbody id="loadBody"></tbody></table></div><div class="row-actions"><button class="btn red" onclick="saveLoadMatrix()">Guardar proyección</button><button class="btn dark" onclick="addLoadRow()">Agregar fila</button></div></div></section>
 
     <section id="weeks" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Generar semanas</h3><p class="muted">El sistema crea los nombres automáticamente para evitar variaciones manuales.</p><label>Mes</label><select id="weekMonth"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select><label>Año</label><input id="weekYear" type="number" min="2025" max="2035" value="2026"><button class="btn red" onclick="saveWeek()">Generar semanas del mes</button></div><div class="panel"><div class="panel-title"><h3>◷ Semanas</h3><small>Columnas dinámicas</small></div><div class="table-scroll"><table><thead><tr><th>Semana</th><th>Inicio</th><th>Fin</th><th>Acciones</th></tr></thead><tbody id="weeksTable"></tbody></table></div></div></div></section>
 

@@ -145,6 +145,7 @@ function fill(id,items,ph,val,txt){const e=document.getElementById(id);if(!e)ret
 function fillStatic(id,ph,items){const e=document.getElementById(id);if(!e)return;const c=e.value;e.innerHTML=`<option value="">${ph}</option>`+items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');e.value=c}
 function renderDashboard(){
   renderDashboardDateControls();
+  renderWeekMonthControls();
   updateQuarterRangeLabel();
   const projects=dashboardProjects();
   const totalProjects=projects.length;
@@ -155,7 +156,7 @@ function renderDashboard(){
   const activeAnalysts=DB.analysts.filter(a=>(a.status||'Activo')==='Activo').length;
   const risk=activeProjectList.filter(p=>{const h=num(p.contracted_hours||p.estimated_hours),c=num(p.consumed_hours);return h>0&&c<=h&&(c/h)>=.9}).length;
   const pending=activeProjectList.reduce((s,p)=>s+Math.max(0,num(p.contracted_hours||p.estimated_hours)-num(p.consumed_hours)),0);
-  const weeks=displayWeeks();
+  const weeks=displayWeeks('dashboard');
   const capTotal=DB.analysts.filter(a=>a.status==='Activo').reduce((s,a)=>s+num(a.weekly_capacity||44),0);
   const overloaded=new Set(capacityOverloads(weeks).filter(x=>x.level==='over').map(x=>x.analyst_id)).size;
   if(typeof kpiTotalProjects!=='undefined')animateNumber(kpiTotalProjects,totalProjects);
@@ -217,11 +218,11 @@ function renderConsultantLoad(weeks){
   const bodyRows=rows.map(r=>{
     const min=Math.min(...r.values.map(v=>r.capacity-v.hours));
     const weekCells=r.values.map(v=>`<td><span class="heat-pill ${pillClass(v.hours,r.capacity)}" title="${esc(v.week)}">${Math.round(v.hours)}h</span></td>`).join('');
-    const available=Math.max(0,Math.round(min));
+    const available=Math.round(min);
     return `<tr>
       <td class="heat-consultant"><div class="heat-consultant-main"><button class="expand-dot" title="Ver proyectos">+</button><strong>${esc(r.name)}</strong></div><small>Cap. ${Math.round(r.capacity)}h/sem</small></td>
       ${weekCells}
-      <td><span class="heat-available ${available===0?'full':''}">${available}h</span></td>
+      <td><span class="heat-available ${available<=0?'full':available<=5?'warn':''}">${available>0?'+':''}${available}h</span></td>
     </tr>`;
   }).join('');
 
@@ -268,7 +269,7 @@ function editCommercial(id){const c=DB.commercials.find(x=>x.id===id);if(!c)retu
 function clearCommercial(){commercialId.value='';commercialName.value='';commercialStatus.value='Activo'}
 async function disableCommercial(id){const {error}=await db.from('commercials').update({status:'Inactivo'}).eq('id',id);if(error)return toast(error.message);await loadAll()}
 async function deleteCommercial(id){const c=DB.commercials.find(x=>x.id===id);if(!c)return;const hasClients=DB.clients.some(x=>x.commercial_id===id);const hasProjects=DB.projects.some(x=>x.commercial_id===id);if(hasClients||hasProjects){alert('No se puede eliminar porque tiene clientes o proyectos asociados. Se puede inactivar.');return;}if(!confirm(`¿Eliminar comercial ${c.name}?`))return;const {error}=await db.from('commercials').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
-function norm(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function norm(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-–—]/g,' ').replace(/\s+/g,' ')}
 function renderAnalystProjectCounts(projects=DB.projects){
   const box=document.getElementById('analystProjectCounts');if(!box)return;
   const allowed=new Set(projects.map(p=>p.id));
@@ -292,7 +293,8 @@ function renderProjects(){
   projectsTable.innerHTML=rows.map(p=>{const pct=Math.round(percent(p));const code=normalizeCountry(p.country_code);const rowClass=pct>100?'overloaded':pct>=90?'risk':'';const pctClass=pct>100?'pct-over':pct>=90?'pct-risk':'pct-ok';const st=(p.status||'').toLowerCase().includes('ejec')?'blue':(p.status||'').toLowerCase().includes('final')?'green':'';return `<tr class="${rowClass}"><td><input type="checkbox"></td><td class="country-cell">${flagFor(code)} ${esc(code||'-')}</td><td class="client-name">${esc(p.clients?.name||'-')}</td><td class="project-name">${esc(p.name)}</td><td>${Math.round(num(p.contracted_hours||p.estimated_hours))}</td><td>${Math.round(num(p.consumed_hours))}</td><td><span class="pct-pill ${pctClass}">${pct}%</span></td><td>${esc(projectAnalysts(p.id)||'-')}</td><td class="project-status-cell"><span class="badge ${st}">${esc(p.status||'-')}</span></td><td class="project-observation-cell">${esc(p.observation||'-')}</td><td class="project-actions-cell"><button class="mini-btn" onclick="openProjectModal('${p.id}')">Editar</button><button class="mini-btn delete" onclick="deleteProject('${p.id}')">Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="11">Sin proyectos para mostrar.</td></tr>';
 }
 function buildLoadRows(){
-  const weeks=displayWeeks();
+  renderWeekMonthControls();
+  const weeks=displayWeeks('load');
   const visibleWeekIds=new Set(weeks.map(w=>w.id));
   const activeIds=new Set(activeProjects().map(p=>p.id));
   const map=new Map();
@@ -335,7 +337,8 @@ function isLoadableProject(p){
 function activeProjects(){return DB.projects.filter(isLoadableProject)}
 function activeAnalysts(){return DB.analysts.filter(a=>(a.status||'Activo')==='Activo')}
 function renderLoadMatrix(){
-  const weeks=displayWeeks(),q=v('loadSearch').toLowerCase();
+  renderWeekMonthControls();
+  const weeks=displayWeeks('load'),q=v('loadSearch').toLowerCase();
   const fa=loadFilterState.analysts,fc=loadFilterState.clients,fs=loadFilterState.statuses;
   loadHead.innerHTML=`<tr><th>Consultor</th><th>Cliente</th><th>Proyecto</th>${weeks.map(w=>`<th title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</th>`).join('')}<th></th></tr>`;
   const filtered=loadRows.map((r,idx)=>({r,idx})).filter(({r})=>{
@@ -353,7 +356,7 @@ function addLoadRow(render=true){loadRows.push({analyst_id:activeAnalysts()[0]?.
 function removeLoadRow(i){loadRows.splice(i,1);renderLoadMatrix()}
 function clearLoadFilters(){loadSearch.value='';loadFilterState.analysts.clear();loadFilterState.clients.clear();loadFilterState.statuses.clear();fillSelects();renderLoadMatrix()}
 async function saveLoadMatrix(){
-  const weeks=displayWeeks(),activeIds=new Set(activeProjects().map(p=>p.id));
+  const weeks=displayWeeks('load'),activeIds=new Set(activeProjects().map(p=>p.id));
   const payload=[];
   loadRows.filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)).forEach(r=>weeks.forEach(w=>payload.push({analyst_id:r.analyst_id,project_id:r.project_id,week_id:w.id,planned_hours:Math.round(num(r.hours[w.id]||0)),real_hours:0})));
   if(payload.length===0)return toast('No hay cargas válidas para guardar');
@@ -366,8 +369,9 @@ async function saveWeek(){
   const year=Number(v('weekYear'));
   if(!month||!year)return toast('Seleccione mes y año');
   const payload=generateWeeksForMonth(year,month);
-  const existing=new Set(DB.weeks.map(w=>norm(w.week_label)));
-  const rows=payload.filter(w=>!existing.has(norm(w.week_label)));
+  const existingLabels=new Set(DB.weeks.map(w=>norm(w.week_label)));
+  const existingDates=new Set(DB.weeks.map(w=>`${w.start_date}|${w.end_date}`));
+  const rows=payload.filter(w=>!existingLabels.has(norm(w.week_label))&&!existingDates.has(`${w.start_date}|${w.end_date}`));
   if(rows.length===0)return toast('Las semanas de ese mes ya existen');
   const r=await db.from('weeks').insert(rows);
   if(r.error)return toast(r.error.message);
@@ -407,27 +411,55 @@ function closeMultiFilters(){document.querySelectorAll('.multi-filter').forEach(
 function setMultiValue(id,value,checked){const box=document.getElementById(id);if(!box)return;checked?box._state.add(String(value)):box._state.delete(String(value));box._onChange?.();}
 function selectAllMulti(id,all){const box=document.getElementById(id);if(!box)return;box._state.clear();if(all)box._items.forEach(x=>box._state.add(String(x[box._valKey])));box._onChange?.();fillSelects();document.getElementById(id)?.classList.add('open')}
 function filterMultiOptions(input){const q=input.value.toLowerCase();input.closest('.multi-menu').querySelectorAll('.multi-option').forEach(opt=>opt.style.display=opt.textContent.toLowerCase().includes(q)?'flex':'none')}
-function displayWeeks(){
-  // V29.4: ventana móvil de semanas.
-  // Muestra siempre la semana actual + las 3 semanas anteriores.
-  // Si la fecha actual no cae dentro de ninguna semana, usa la siguiente semana futura;
-  // si no hay futuras, usa la última registrada. Así julio no rompe el dashboard, por una vez.
-  const weeks=[...DB.weeks]
+function selectableWeeks(){
+  return [...DB.weeks]
     .filter(w=>!String(w.week_label||'').toLowerCase().includes('cartera general') && w.start_date)
     .sort((a,b)=>new Date(a.start_date+'T00:00:00')-new Date(b.start_date+'T00:00:00'));
-  if(!weeks.length)return [];
+}
+function weekMonthKey(w){
+  if(!w?.start_date)return '';
+  const d=new Date(w.start_date+'T00:00:00');
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabelFromKey(key){
+  if(!key)return 'Sin semanas';
+  const [y,m]=key.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('es-NI',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
+}
+function defaultWeekMonthKey(){
+  const weeks=selectableWeeks();
+  if(!weeks.length)return '';
   const today=new Date();today.setHours(12,0,0,0);
-  let currentIndex=weeks.findIndex(w=>{
+  const current=weeks.find(w=>{
     const start=new Date(w.start_date+'T00:00:00');
     const end=w.end_date?new Date(w.end_date+'T23:59:59'):new Date(start.getTime()+6*24*60*60*1000);
-    return today>=start && today<=end;
+    return today>=start&&today<=end;
   });
-  if(currentIndex===-1){
-    currentIndex=weeks.findIndex(w=>new Date(w.start_date+'T00:00:00')>today);
-    if(currentIndex===-1)currentIndex=weeks.length-1;
-  }
-  const startIndex=Math.max(0,currentIndex-3);
-  return weeks.slice(startIndex,currentIndex+1);
+  if(current)return weekMonthKey(current);
+  const future=weeks.find(w=>new Date(w.start_date+'T00:00:00')>today);
+  return weekMonthKey(future||weeks[weeks.length-1]);
+}
+function selectedWeekMonthKey(context='dashboard'){
+  const id=context==='load'?'loadWeekMonth':'dashboardWeekMonth';
+  const el=document.getElementById(id);
+  return el?.value||defaultWeekMonthKey();
+}
+function renderWeekMonthControls(){
+  const weeks=selectableWeeks();
+  const keys=[...new Set(weeks.map(weekMonthKey).filter(Boolean))];
+  const def=defaultWeekMonthKey();
+  ['dashboardWeekMonth','dashboardHeatmapMonth','loadWeekMonth'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const current=el.value||def;
+    el.innerHTML=keys.map(k=>`<option value="${k}">${esc(monthLabelFromKey(k))}</option>`).join('');
+    el.value=keys.includes(current)?current:def;
+  });
+  const dash=document.getElementById('dashboardWeekMonth'),heat=document.getElementById('dashboardHeatmapMonth');
+  if(dash&&heat&&heat.value!==dash.value)heat.value=dash.value;
+}
+function displayWeeks(context='dashboard'){
+  const key=selectedWeekMonthKey(context);
+  return selectableWeeks().filter(w=>weekMonthKey(w)===key);
 }
 function animateNumber(el,value,suffix=''){
   if(!el)return;
@@ -558,7 +590,7 @@ async function deleteProject(id){
     toast('No se pudo eliminar: '+e.message);
   }
 }
-function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))}))}
+function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))})).sort((a,b)=>{const avA=Math.min(...a.values.map(v=>a.capacity-v.hours));const avB=Math.min(...b.values.map(v=>b.capacity-v.hours));return avB-avA||a.name.localeCompare(b.name);})}
 function isActiveLoad(load){return isLoadableProject(load.projects)}
 function sumWeek(wid){return DB.loads.filter(l=>l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function sumAnalystWeek(aid,wid){return DB.loads.filter(l=>l.analyst_id===aid&&l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
@@ -569,10 +601,10 @@ function pillClass(h,c){if(h>=c)return'red';if(h>=c*.9)return'yellow';return'gre
     .sort((a,b)=>String(a.role)==='Líder'?-1:String(b.role)==='Líder'?1:0)
     .map(l=>`${l.analysts?.name||'Sin nombre'} (${l.role||'Apoyo'}${l.allocation_pct?` ${Math.round(num(l.allocation_pct))}%`:''})`)
     .join(', ')
-}function percent(p){const h=num(p.contracted_hours||p.estimated_hours);return h?num(p.consumed_hours)/h*100:0}function country(code){const clean=normalizeCountry(code);return DB.countries.find(c=>c.code===clean)||{code:clean,name:clean,flag:flagFor(clean)}}function countryLabel(code){const clean=normalizeCountry(code);const c=country(clean);return `${clean} · ${c.name||clean}`}function normalizeCountry(code){const clean=String(code||'').trim().toUpperCase();const map={NIC:'NI',RD:'DO',SLV:'SV',SVL:'SV',HD:'HN',GI:'GT',PANAMA:'PA','PANAMÁ':'PA'};return map[clean]||clean}function flagFor(code){const clean=normalizeCountry(code);const known=['NI','GT','PA','DO','SV','HN','CR','MX','PY','CO','PE','US','ES','AR','BR','CL','EC','UY','VE','BO','CA'];if(known.includes(clean))return `<img class="flag-img" src="assets/flags/${clean}.svg" alt="${clean}" loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'flag-fallback\'>🏳️</span>')">`;return '<span class="flag-fallback">🏳️</span>'}function dashboardAlertWeeks(){const w=currentWeek();return w?[w]:displayWeeks().slice(-1)}
+}function percent(p){const h=num(p.contracted_hours||p.estimated_hours);return h?num(p.consumed_hours)/h*100:0}function country(code){const clean=normalizeCountry(code);return DB.countries.find(c=>c.code===clean)||{code:clean,name:clean,flag:flagFor(clean)}}function countryLabel(code){const clean=normalizeCountry(code);const c=country(clean);return `${clean} · ${c.name||clean}`}function normalizeCountry(code){const clean=String(code||'').trim().toUpperCase();const map={NIC:'NI',RD:'DO',SLV:'SV',SVL:'SV',HD:'HN',GI:'GT',PANAMA:'PA','PANAMÁ':'PA'};return map[clean]||clean}function flagFor(code){const clean=normalizeCountry(code);const known=['NI','GT','PA','DO','SV','HN','CR','MX','PY','CO','PE','US','ES','AR','BR','CL','EC','UY','VE','BO','CA'];if(known.includes(clean))return `<img class="flag-img" src="assets/flags/${clean}.svg" alt="${clean}" loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\'flag-fallback\'>🏳️</span>')">`;return '<span class="flag-fallback">🏳️</span>'}function dashboardAlertWeeks(){const w=currentWeek();return w?[w]:displayWeeks('dashboard').slice(-1)}
 function currentWeek(){
   const today=new Date();today.setHours(12,0,0,0);
-  const weeks=displayWeeks();
+  const weeks=displayWeeks('dashboard');
   const current=weeks.find(w=>{const start=new Date(w.start_date+'T00:00:00');const end=new Date(w.end_date+'T23:59:59');return today>=start&&today<=end;});
   if(current)return current;
   const future=weeks.find(w=>new Date(w.start_date+'T00:00:00')>today);
