@@ -1,4 +1,4 @@
-let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[]};
+let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[]};
 const TALENT_APTITUDE=["Dominio Técnico","Autonomía","Calidad","Resolución de Problemas","Aprendizaje"];
 const TALENT_ATTITUDE=["Iniciativa","Resiliencia","Colaboración","Compromiso","Recepción de Feedback"];
 let loadRows=[];let currentSession=null;let currentProfile=null;
@@ -109,7 +109,7 @@ async function ensureProfile(){
 function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
-  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments]=await Promise.all([
+  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications]=await Promise.all([
     db.from('countries').select('*').order('code'),
     db.from('commercials').select('*').order('name'),
     db.from('clients').select('*, commercials(name)').order('name'),
@@ -119,10 +119,14 @@ async function loadAll(){try{
     db.from('weekly_project_load').select('*, projects(id,name,client_id,status,clients(name)), analysts(id,name,weekly_capacity), weeks(id,week_label,start_date)').order('created_at'),
     db.from('roles').select('*').order('name'),
     db.from('app_users').select('*, roles(name)').order('full_name'),
-    db.from('project_assignments').select('*, projects(id,name,status,created_at,client_id), analysts(id,name)').order('created_at')
+    db.from('project_assignments').select('*, projects(id,name,status,created_at,client_id), analysts(id,name)').order('created_at'),
+    db.from('performance_reviews').select('*').order('updated_at',{ascending:false}),
+    db.from('performance_answers').select('*').order('created_at'),
+    db.from('performance_action_plans').select('*').order('created_at'),
+    db.from('analyst_certifications').select('*').order('expiration_date',{ascending:true,nullsFirst:false})
   ]);
-  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments].forEach(r=>{if(r.error)throw r.error});
-  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[]};
+  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications].forEach(r=>{if(r.error)throw r.error});
+  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
 function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTalent();renderUsers();renderSidebarStatusWidget();}
@@ -435,7 +439,31 @@ function talentPeriod(){
   return {year:y,quarter:q,start,end,label:q?`Q${q} ${y}`:`Año ${y}`};
 }
 function weeksInTalentPeriod(){const p=talentPeriod();return DB.weeks.filter(w=>{if(!w.start_date)return false;const d=new Date(w.start_date+'T00:00:00');return d>=p.start&&d<=p.end;})}
-function loadReview(analystId,year,quarter){return talentStorage()[talentKey(analystId,year,quarter)]||null}
+function loadReview(analystId,year,quarter){
+  if(!analystId)return null;
+  const dbReview=DB.performanceReviews?.find(r=>r.analyst_id===analystId&&Number(r.period_year)===Number(year)&&Number(r.period_quarter)===Number(quarter));
+  if(dbReview){
+    return {
+      id:dbReview.id,
+      analyst_id:dbReview.analyst_id,
+      year:dbReview.period_year,
+      quarter:dbReview.period_quarter,
+      aptitude:dbReview.aptitude||{},
+      attitude:dbReview.attitude||{},
+      achievements:dbReview.achievements||'',
+      challenges:dbReview.challenges||'',
+      impactProjects:dbReview.impact_projects||'',
+      supportNeeded:dbReview.support_needed||'',
+      trainingNeeded:dbReview.training_needed||'',
+      readyForMore:!!dbReview.ready_for_more_responsibility,
+      strengths:dbReview.strengths||'',
+      improvements:dbReview.improvements||'',
+      actionPlan:dbReview.action_plan||'',
+      comments:dbReview.comments||''
+    };
+  }
+  return talentStorage()[talentKey(analystId,year,quarter)]||null;
+}
 function currentTalentReview(){const p=talentPeriod();return loadReview(document.getElementById('talentAnalyst')?.value,p.year,p.quarter)}
 function talentScoresFromReview(r){
   const apt=TALENT_APTITUDE.reduce((s,q)=>s+num(r?.aptitude?.[q]||0),0);
@@ -475,11 +503,10 @@ function renderTalent(){
   const analystId=document.getElementById('talentAnalyst')?.value;
   if(!analystId)return;
   const p=talentPeriod();
-  const store=talentStorage();
   const counts={star:0,potential:0,difficult:0,low:0};
   const active=DB.analysts.filter(a=>(a.status||'Activo')==='Activo');
   const rows=active.map(a=>{
-    const r=store[talentKey(a.id,p.year,p.quarter)];
+    const r=loadReview(a.id,p.year,p.quarter);
     const scores=talentScoresFromReview(r);
     const has=r&&scores.aptitude>0&&scores.attitude>0;
     const q=has?talentQuadrant(scores.aptitude,scores.attitude):{key:'none',label:'Sin evaluar',desc:'Pendiente'};
@@ -499,6 +526,12 @@ function renderTalentQuestions(){
   const apt=document.getElementById('aptitudeQuestions'),att=document.getElementById('attitudeQuestions');
   if(apt)apt.innerHTML=make(TALENT_APTITUDE,'aptitude');
   if(att)att.innerHTML=make(TALENT_ATTITUDE,'attitude');
+  if(document.getElementById('talentAchievements'))talentAchievements.value=r.achievements||'';
+  if(document.getElementById('talentChallenges'))talentChallenges.value=r.challenges||'';
+  if(document.getElementById('talentImpactProjects'))talentImpactProjects.value=r.impactProjects||'';
+  if(document.getElementById('talentSupportNeeded'))talentSupportNeeded.value=r.supportNeeded||'';
+  if(document.getElementById('talentTrainingNeeded'))talentTrainingNeeded.value=r.trainingNeeded||'';
+  if(document.getElementById('talentReadyForMore'))talentReadyForMore.value=String(!!r.readyForMore);
   if(document.getElementById('talentStrengths'))talentStrengths.value=r.strengths||'';
   if(document.getElementById('talentImprovements'))talentImprovements.value=r.improvements||'';
   if(document.getElementById('talentActionPlan'))talentActionPlan.value=r.actionPlan||'';
@@ -518,19 +551,77 @@ function renderTalentDetail(){
   talentProductionCards.innerHTML=`<div><strong>${prod.total}</strong><span>Proyectos</span></div><div><strong>${prod.closed}</strong><span>Cerrados</span></div><div><strong>${prod.pending}</strong><span>Pendientes</span></div><div><strong>${Math.round(prod.hours)}h</strong><span>Horas</span></div><div><strong>${prod.clients}</strong><span>Clientes</span></div><div><strong>${prod.leader}/${prod.support}</strong><span>Líder / Apoyo</span></div>`;
   talentProjectsTable.innerHTML=prod.projectRows.map(x=>{const c=DB.clients.find(c=>c.id===x.project.client_id);return `<tr><td>${esc(c?.name||x.project.clients?.name||'-')}</td><td><strong>${esc(x.project.name)}</strong></td><td>${esc(x.role)}</td><td><span class="badge ${normalizeProjectStatus(x.project.status).toLowerCase()==='finalizado'?'green':'yellow'}">${esc(normalizeProjectStatus(x.project.status)||'-')}</span></td><td>${Math.round(x.hours)}h</td></tr>`}).join('')||'<tr><td colspan="5">Sin proyectos/cargas en el periodo seleccionado.</td></tr>';
   generateTalentText(false);
+  renderCertifications();
 }
 function collectTalentReview(){
   const aptitude={},attitude={};
   document.querySelectorAll('#aptitudeQuestions select').forEach(s=>aptitude[s.dataset.question]=num(s.value));
   document.querySelectorAll('#attitudeQuestions select').forEach(s=>attitude[s.dataset.question]=num(s.value));
   const p=talentPeriod();
-  return {analyst_id:talentAnalyst.value,year:p.year,quarter:p.quarter,aptitude,attitude,strengths:talentStrengths.value,improvements:talentImprovements.value,actionPlan:talentActionPlan.value,comments:talentComments.value,updated_at:new Date().toISOString()};
+  return {analyst_id:talentAnalyst.value,year:p.year,quarter:p.quarter,aptitude,attitude,
+    achievements:talentAchievements?.value||'',
+    challenges:talentChallenges?.value||'',
+    impactProjects:talentImpactProjects?.value||'',
+    supportNeeded:talentSupportNeeded?.value||'',
+    trainingNeeded:talentTrainingNeeded?.value||'',
+    readyForMore:(talentReadyForMore?.value==='true'),
+    strengths:talentStrengths.value,improvements:talentImprovements.value,actionPlan:talentActionPlan.value,comments:talentComments.value,updated_at:new Date().toISOString()};
 }
-function saveTalentReview(){
+async function saveTalentReview(){
   const r=collectTalentReview();
   if(!r.analyst_id)return toast('Seleccione consultor');
-  const data=talentStorage();data[talentKey(r.analyst_id,r.year,r.quarter)]=r;saveTalentStorage(data);
-  renderTalent();toast('Evaluación guardada localmente');
+  const scores=talentScoresFromReview(r);
+  const q=talentQuadrant(scores.aptitude,scores.attitude);
+  const payload={
+    analyst_id:r.analyst_id,
+    period_year:r.year,
+    period_quarter:r.quarter,
+    aptitude:r.aptitude,
+    attitude:r.attitude,
+    aptitude_score:scores.aptitude,
+    attitude_score:scores.attitude,
+    quadrant:q.key,
+    achievements:r.achievements,
+    challenges:r.challenges,
+    impact_projects:r.impactProjects,
+    support_needed:r.supportNeeded,
+    training_needed:r.trainingNeeded,
+    ready_for_more_responsibility:r.readyForMore,
+    strengths:r.strengths,
+    improvements:r.improvements,
+    action_plan:r.actionPlan,
+    comments:r.comments,
+    created_by:currentProfile?.id||null,
+    updated_at:new Date().toISOString()
+  };
+  const {data,error}=await db.from('performance_reviews')
+    .upsert(payload,{onConflict:'analyst_id,period_year,period_quarter'})
+    .select('*').single();
+  if(error){
+    console.error(error);
+    return toast('Error guardando evaluación: '+error.message);
+  }
+
+  const answers=[];
+  TALENT_APTITUDE.forEach(qLabel=>answers.push({review_id:data.id,category:'aptitude',question_key:qLabel,question_label:qLabel,score:num(r.aptitude[qLabel]||0)}));
+  TALENT_ATTITUDE.forEach(qLabel=>answers.push({review_id:data.id,category:'attitude',question_key:qLabel,question_label:qLabel,score:num(r.attitude[qLabel]||0)}));
+  const delAnswers=await db.from('performance_answers').delete().eq('review_id',data.id);
+  if(delAnswers.error)console.warn(delAnswers.error);
+  if(answers.length){
+    const ans=await db.from('performance_answers').insert(answers);
+    if(ans.error)console.warn(ans.error);
+  }
+
+  const delPlans=await db.from('performance_action_plans').delete().eq('review_id',data.id);
+  if(delPlans.error)console.warn(delPlans.error);
+  if((r.actionPlan||'').trim()){
+    const plan=await db.from('performance_action_plans').insert([{review_id:data.id,objective:r.actionPlan.trim(),status:'Pendiente',comments:r.comments||''}]);
+    if(plan.error)console.warn(plan.error);
+  }
+
+  const idx=DB.performanceReviews.findIndex(x=>x.id===data.id);
+  if(idx>=0)DB.performanceReviews[idx]=data;else DB.performanceReviews.unshift(data);
+  await loadAll();toast('Evaluación guardada en Supabase');
 }
 function generateTalentText(showToast=true){
   const analystId=document.getElementById('talentAnalyst')?.value;
@@ -538,10 +629,97 @@ function generateTalentText(showToast=true){
   const p=talentPeriod();
   const r=loadReview(analystId,p.year,p.quarter)||collectTalentReview();
   const s=talentScoresFromReview(r);const q=talentQuadrant(s.aptitude,s.attitude);const prod=talentProduction(analystId);
-  const text=`Evaluación trimestral SISAP - ${analyst.name}\nPeriodo: ${p.label}\n\nResultado del cuadrante: ${q.label}\nAptitud: ${s.aptitude}/25\nActitud: ${s.attitude}/25\n\nProducción del periodo:\n- Proyectos asignados: ${prod.total}\n- Proyectos cerrados: ${prod.closed}\n- Proyectos pendientes: ${prod.pending}\n- Horas cargadas: ${Math.round(prod.hours)}h\n- Clientes atendidos: ${prod.clients}\n- Participación líder/apoyo: ${prod.leader}/${prod.support}\n\nFortalezas:\n${r.strengths||'Pendiente de documentar.'}\n\nÁreas de mejora:\n${r.improvements||'Pendiente de documentar.'}\n\nPlan de acción:\n${r.actionPlan||'Pendiente de definir.'}\n\nComentarios del Team Lead:\n${r.comments||'Sin comentarios adicionales.'}`;
+  const certs=selectedCertifications();
+  const certText=certs.length?certs.map(c=>`- ${c.certification_name} (${c.certification_body||'Organismo no definido'}) · ${certificationStatus(c)}${c.expiration_date?` · vence ${fmt(c.expiration_date)}`:''}`).join('\n'):'- Sin certificaciones registradas.';
+  const text=`Evaluación trimestral SISAP - ${analyst.name}\nPeriodo: ${p.label}\n\nResultado del cuadrante: ${q.label}\nAptitud: ${s.aptitude}/25\nActitud: ${s.attitude}/25\n\nProducción del periodo:\n- Proyectos asignados: ${prod.total}\n- Proyectos cerrados: ${prod.closed}\n- Proyectos pendientes: ${prod.pending}\n- Horas cargadas: ${Math.round(prod.hours)}h\n- Clientes atendidos: ${prod.clients}\n- Participación líder/apoyo: ${prod.leader}/${prod.support}\n\nCertificaciones:\n${certText}\n\nFortalezas:\n${r.strengths||'Pendiente de documentar.'}\n\nÁreas de mejora:\n${r.improvements||'Pendiente de documentar.'}\n\nPlan de acción:\n${r.actionPlan||'Pendiente de definir.'}\n\nComentarios del Team Lead:\n${r.comments||'Sin comentarios adicionales.'}`;
   const box=document.getElementById('talentGeneratedReport');if(box)box.textContent=text;
   if(showToast)toast('Resumen generado');
   return text;
+}
+
+
+function certificationStatus(cert){
+  const explicit=(cert.status||'').trim();
+  if(cert.expiration_date){
+    const today=new Date();today.setHours(0,0,0,0);
+    const exp=new Date(cert.expiration_date+'T00:00:00');
+    const days=Math.ceil((exp-today)/(1000*60*60*24));
+    if(days<0)return 'Vencida';
+    if(days<=90)return 'Por vencer';
+  }
+  return explicit||'Vigente';
+}
+function certBadgeClass(status){
+  const s=String(status||'').toLowerCase();
+  if(s.includes('vencida'))return 'red';
+  if(s.includes('por vencer'))return 'yellow';
+  if(s.includes('proceso'))return 'yellow';
+  return 'green';
+}
+function selectedCertifications(){
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  return (DB.analystCertifications||[])
+    .filter(c=>c.analyst_id===analystId)
+    .sort((a,b)=>String(a.expiration_date||'9999-12-31').localeCompare(String(b.expiration_date||'9999-12-31'))||String(a.certification_name).localeCompare(String(b.certification_name)));
+}
+function renderCertifications(){
+  const certs=selectedCertifications();
+  const kpi=document.getElementById('certificationKpis');
+  const tbody=document.getElementById('certificationsTable');
+  if(!kpi||!tbody)return;
+  const active=certs.filter(c=>certificationStatus(c)==='Vigente').length;
+  const expiring=certs.filter(c=>certificationStatus(c)==='Por vencer').length;
+  const expired=certs.filter(c=>certificationStatus(c)==='Vencida').length;
+  kpi.innerHTML=`<div><strong>${certs.length}</strong><span>Total</span></div><div><strong>${active}</strong><span>Vigentes</span></div><div><strong>${expiring}</strong><span>Por vencer</span></div><div><strong>${expired}</strong><span>Vencidas</span></div>`;
+  tbody.innerHTML=certs.map(c=>{
+    const status=certificationStatus(c);
+    return `<tr><td><strong>${esc(c.certification_name||'-')}</strong><small>${esc(c.certificate_number||'')}</small></td><td>${esc(c.certification_body||'-')}</td><td>${fmt(c.obtained_date)}</td><td>${fmt(c.expiration_date)}</td><td><span class="badge ${certBadgeClass(status)}">${esc(status)}</span></td><td class="actions"><button class="mini-btn" onclick="editCertification('${c.id}')">Editar</button><button class="mini-btn delete" onclick="deleteCertification('${c.id}')">Eliminar</button></td></tr>`;
+  }).join('')||'<tr><td colspan="6">Este consultor todavía no tiene certificaciones registradas.</td></tr>';
+}
+function clearCertificationForm(){
+  ['certificationId','certificationName','certificationBody','certificationObtained','certificationExpiration','certificationNumber','certificationNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const st=document.getElementById('certificationStatus');if(st)st.value='Vigente';
+}
+function editCertification(id){
+  const c=(DB.analystCertifications||[]).find(x=>x.id===id);if(!c)return;
+  certificationId.value=c.id;
+  certificationName.value=c.certification_name||'';
+  certificationBody.value=c.certification_body||'';
+  certificationObtained.value=c.obtained_date||'';
+  certificationExpiration.value=c.expiration_date||'';
+  certificationStatus.value=c.status||certificationStatus(c)||'Vigente';
+  certificationNumber.value=c.certificate_number||'';
+  certificationNotes.value=c.notes||'';
+}
+async function saveCertification(){
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  if(!analystId)return toast('Seleccione consultor');
+  const payload={
+    analyst_id:analystId,
+    certification_name:(certificationName.value||'').trim(),
+    certification_body:(certificationBody.value||'').trim()||null,
+    obtained_date:certificationObtained.value||null,
+    expiration_date:certificationExpiration.value||null,
+    status:certificationStatus.value||'Vigente',
+    certificate_number:(certificationNumber.value||'').trim()||null,
+    notes:(certificationNotes.value||'').trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  if(!payload.certification_name)return toast('Nombre de certificación requerido');
+  const id=certificationId.value;
+  const res=id?await db.from('analyst_certifications').update(payload).eq('id',id).select('*').single():await db.from('analyst_certifications').insert([payload]).select('*').single();
+  if(res.error){console.error(res.error);return toast('Error guardando certificación: '+res.error.message)}
+  const idx=DB.analystCertifications.findIndex(x=>x.id===res.data.id);
+  if(idx>=0)DB.analystCertifications[idx]=res.data;else DB.analystCertifications.push(res.data);
+  clearCertificationForm();renderCertifications();generateTalentText(false);toast('Certificación guardada');
+}
+async function deleteCertification(id){
+  const c=(DB.analystCertifications||[]).find(x=>x.id===id);if(!c)return;
+  if(!confirm(`¿Eliminar la certificación "${c.certification_name}"?`))return;
+  const {error}=await db.from('analyst_certifications').delete().eq('id',id);
+  if(error)return toast(error.message);
+  DB.analystCertifications=DB.analystCertifications.filter(x=>x.id!==id);
+  clearCertificationForm();renderCertifications();generateTalentText(false);toast('Certificación eliminada');
 }
 
 function renderUsers(){usersTable.innerHTML=DB.users.map(u=>{const views=[u.can_dashboard?'Dashboard':'',u.can_clients?'Clientes':'',u.can_analysts?'Analistas':'',u.can_projects?'Proyectos':'',u.can_load?'Carga':'',u.can_weeks?'Semanas':'',u.can_users?'Usuarios':''].filter(Boolean).join(', ');return `<tr><td><strong>${esc(u.full_name)}</strong></td><td>${esc(u.email)}</td><td>${esc(u.roles?.name||'-')}</td><td><span class="badge ${u.status==='Activo'?'green':'red'}">${esc(u.status)}</span></td><td>${esc(views)}</td><td class="actions"><button class="mini-btn" onclick="editAppUser('${u.id}')">Editar</button><button class="mini-btn delete" onclick="disableAppUser('${u.id}')">Inactivar</button></td></tr>`}).join('')}

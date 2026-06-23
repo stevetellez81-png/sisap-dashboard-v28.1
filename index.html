@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V30.0</title>
+  <title>SISAP Dashboard V30.2</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.0</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.2</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.0</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.2</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -36,7 +36,7 @@
     <div class="sidebar-widget"><div class="sidebar-widget-title">Distribución por estado</div><div id="sidebarStatusWidget" class="status-widget-mini"><small>Cargando...</small></div></div><button class="btn logout" onclick="logout()">⎋ Cerrar sesión</button>
   </aside>
   <main class="main">
-    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance, Capacity & Talent v30.0</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
+    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance, Capacity & Talent v30.2</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
 
     <section id="dashboard" class="view active">
       <div class="panel dashboard-filters v29-filters"><div class="range-card"><strong>Rango trimestral</strong><span id="quarterRangeLabel">Seleccione periodo</span></div><div class="filters"><select id="dashboardYear" onchange="renderDashboard()"><option value="">Todos los años</option></select><input id="dashboardFrom" type="date" onchange="renderDashboard()"><input id="dashboardTo" type="date" onchange="renderDashboard()"><button class="btn dark" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">Limpiar fechas</button></div></div>
@@ -129,7 +129,7 @@
     <section id="talent" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V30 · Gestión de Consultores</div>
+          <div class="eyebrow">V30.2 · Gestión de Consultores</div>
           <h3>Talento y Desempeño</h3>
           <p class="muted">Evaluación por consultor basada en producción operativa, aptitud, actitud y plan de acción trimestral.</p>
         </div>
@@ -190,6 +190,14 @@
 
         <div class="panel form-panel talent-review-panel">
           <div class="panel-title"><div><h3>Evaluación trimestral</h3><small>Escala 1 a 5</small></div><button class="btn red" onclick="saveTalentReview()">Guardar evaluación</button></div>
+          <h4>Contexto del trimestre</h4>
+          <label>Principales logros</label><textarea id="talentAchievements" placeholder="Logros relevantes del consultor durante el periodo"></textarea>
+          <label>Dificultades enfrentadas</label><textarea id="talentChallenges" placeholder="Bloqueos, cambios, presión operativa o situaciones relevantes"></textarea>
+          <label>Proyectos o clientes de mayor impacto</label><textarea id="talentImpactProjects" placeholder="Proyectos/clientes que marcaron el trimestre"></textarea>
+          <label>Apoyo requerido para el próximo trimestre</label><textarea id="talentSupportNeeded" placeholder="Apoyo del líder, recursos, acompañamiento o mentoría"></textarea>
+          <label>Capacitación técnica requerida</label><textarea id="talentTrainingNeeded" placeholder="Tecnologías, marcos, herramientas o habilidades a reforzar"></textarea>
+          <label>¿Está listo para asumir más responsabilidad?</label>
+          <select id="talentReadyForMore"><option value="false">No todavía</option><option value="true">Sí</option></select>
           <h4>Aptitud · Saber hacer</h4>
           <div id="aptitudeQuestions" class="review-questions"></div>
           <h4>Actitud · Querer hacer</h4>
@@ -199,6 +207,26 @@
           <label>Plan de acción</label><textarea id="talentActionPlan" placeholder="Objetivos, fechas y compromisos"></textarea>
           <label>Comentarios del Team Lead</label><textarea id="talentComments" placeholder="Comentarios para el informe trimestral"></textarea>
           <div class="row-actions"><button class="btn dark" onclick="generateTalentText()">Generar resumen</button></div>
+        </div>
+      </div>
+
+
+
+      <div class="grid-2 talent-grid">
+        <div class="panel">
+          <div class="panel-title"><div><h3>Certificaciones del consultor</h3><small>Vinculadas directamente al analista seleccionado</small></div></div>
+          <div id="certificationKpis" class="cert-kpis"></div>
+          <div class="table-scroll"><table class="cert-table"><thead><tr><th>Certificación</th><th>Organismo</th><th>Obtenida</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="certificationsTable"></tbody></table></div>
+        </div>
+        <div class="panel form-panel certification-panel">
+          <div class="panel-title"><div><h3>Nueva / Editar certificación</h3><small>Se guarda por consultor</small></div><button class="btn dark" onclick="clearCertificationForm()">Nueva</button></div>
+          <input type="hidden" id="certificationId">
+          <label>Certificación</label><input id="certificationName" placeholder="CISA, CISM, ISO 27001 Lead Auditor, PCI DSS...">
+          <label>Organismo certificador</label><input id="certificationBody" placeholder="ISACA, PECB, PCI SSC, SWIFT...">
+          <div class="form-grid-2"><div><label>Fecha obtenida</label><input id="certificationObtained" type="date"></div><div><label>Fecha vencimiento</label><input id="certificationExpiration" type="date"></div></div>
+          <div class="form-grid-2"><div><label>Estado</label><select id="certificationStatus"><option>Vigente</option><option>Por vencer</option><option>Vencida</option><option>En proceso</option><option>No aplica</option></select></div><div><label>Número / ID</label><input id="certificationNumber" placeholder="Opcional"></div></div>
+          <label>Notas</label><textarea id="certificationNotes" placeholder="CPE, evidencia, comentarios o compromisos"></textarea>
+          <div class="row-actions"><button class="btn red" onclick="saveCertification()">Guardar certificación</button><button class="btn dark" onclick="clearCertificationForm()">Limpiar</button></div>
         </div>
       </div>
 
