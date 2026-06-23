@@ -708,3 +708,33 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .data-table td:nth-child(10){white-space:normal;word-break:break-word}
 .actions{white-space:nowrap}
 .mini-btn{padding:6px 10px;border-radius:8px;border:0;cursor:pointer}
+
+
+/* ===== V29.7: selector mensual real para dashboard y cargabilidad ===== */
+.month-selector{
+  min-width: 170px;
+  height: 40px;
+  border:1px solid #d7dce7;
+  border-radius:12px;
+  padding:0 14px;
+  background:#fff;
+  font-weight:800;
+  color:#1c2230;
+}
+.load-filters .month-selector{min-width:190px;}
+.heatmap-table thead th,
+.matrix thead th{
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+.heatmap-table th:first-child,
+.heatmap-table td:first-child{
+  position:sticky;
+  left:0;
+  z-index:15;
+  background:#fff;
+}
+.heatmap-table thead th:first-child{z-index:25;background:#0d1322;}
+.heat-available.warn{background:#fff1cc;color:#8a5a00;}
+.heat-available.full{background:#fde2e2;color:#b42318;}
