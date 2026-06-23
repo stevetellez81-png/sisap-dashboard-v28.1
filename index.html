@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V29.12</title>
+  <title>SISAP Dashboard V30.0</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.12</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.0</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V29.12</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.0</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -30,12 +30,13 @@
       <button class="nav" data-view="projects" data-permission="can_projects">▤ Proyectos</button>
       <button class="nav" data-view="load" data-permission="can_load">▥ Cargabilidad</button>
       <button class="nav" data-view="weeks" data-permission="can_weeks">◷ Semanas</button>
+      <button class="nav" data-view="talent" data-permission="can_analysts">✦ Talento</button>
       <button class="nav" data-view="users" data-permission="can_users">⚙ Usuarios</button>
     </nav>
     <div class="sidebar-widget"><div class="sidebar-widget-title">Distribución por estado</div><div id="sidebarStatusWidget" class="status-widget-mini"><small>Cargando...</small></div></div><button class="btn logout" onclick="logout()">⎋ Cerrar sesión</button>
   </aside>
   <main class="main">
-    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance & Capacity v29.12</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
+    <header class="top v29-top"><div class="title-block"><div class="eyebrow">SISAP Compliance Platform</div><h2 id="pageTitle">SISAP Dashboard <span id="globalComplianceBadge" class="compliance-badge green">86%</span></h2><p id="pageSubtitle">Trimestral Compliance, Capacity & Talent v30.0</p></div><div class="top-actions"><button class="btn ghost" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">⌫ Limpiar filtros</button><button class="btn red" onclick="loadAll()">↻ Actualizar</button></div></header>
 
     <section id="dashboard" class="view active">
       <div class="panel dashboard-filters v29-filters"><div class="range-card"><strong>Rango trimestral</strong><span id="quarterRangeLabel">Seleccione periodo</span></div><div class="filters"><select id="dashboardYear" onchange="renderDashboard()"><option value="">Todos los años</option></select><input id="dashboardFrom" type="date" onchange="renderDashboard()"><input id="dashboardTo" type="date" onchange="renderDashboard()"><button class="btn dark" onclick="dashboardYear.value='';dashboardFrom.value='';dashboardTo.value='';renderDashboard()">Limpiar fechas</button></div></div>
@@ -122,6 +123,90 @@
     <section id="load" class="view"><div class="panel"><div class="panel-title"><div><h3>Proyección semanal de carga</h3><small>Planeación de capacidad: analista + proyecto + horas presupuestadas por semana</small></div><div class="load-actions-top"><button class="btn ghost" onclick="clearLoadFilters()">Limpiar filtros</button><button class="btn dark" onclick="loadAll()">Actualizar</button></div></div><div class="filters load-filters"><select id="loadWeekMonth" class="month-selector" onchange="buildLoadRows();renderLoadMatrix()"></select><input id="loadSearch" oninput="renderLoadMatrix()" placeholder="Buscar consultor, cliente o proyecto..."><div id="loadFilterAnalystBox" class="multi-filter"></div><div id="loadFilterClientBox" class="multi-filter"></div><div id="loadFilterStatusBox" class="multi-filter"></div></div><div class="table-scroll matrix"><table><thead id="loadHead"></thead><tbody id="loadBody"></tbody></table></div><div class="row-actions"><button class="btn red" onclick="saveLoadMatrix()">Guardar proyección</button><button class="btn dark" onclick="addLoadRow()">Agregar fila</button></div></div></section>
 
     <section id="weeks" class="view"><div class="two-cols"><div class="panel form-panel"><h3>Generar semanas</h3><p class="muted">El sistema crea los nombres automáticamente para evitar variaciones manuales.</p><label>Mes</label><select id="weekMonth"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select><label>Año</label><input id="weekYear" type="number" min="2025" max="2035" value="2026"><button class="btn red" onclick="saveWeek()">Generar semanas del mes</button></div><div class="panel"><div class="panel-title"><h3>◷ Semanas</h3><small>Columnas dinámicas</small></div><div class="table-scroll"><table><thead><tr><th>Semana</th><th>Inicio</th><th>Fin</th><th>Acciones</th></tr></thead><tbody id="weeksTable"></tbody></table></div></div></div></section>
+
+
+
+    <section id="talent" class="view">
+      <div class="panel talent-hero">
+        <div>
+          <div class="eyebrow">V30 · Gestión de Consultores</div>
+          <h3>Talento y Desempeño</h3>
+          <p class="muted">Evaluación por consultor basada en producción operativa, aptitud, actitud y plan de acción trimestral.</p>
+        </div>
+        <div class="talent-filters">
+          <label>Consultor</label>
+          <select id="talentAnalyst" onchange="renderTalent()"></select>
+          <label>Año</label>
+          <select id="talentYear" onchange="renderTalent()"></select>
+          <label>Periodo</label>
+          <select id="talentQuarter" onchange="renderTalent()">
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+            <option value="0">Año completo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="kpis talent-kpis">
+        <div class="kpi star"><span>⭐ Estrellas</span><strong id="talentStarCount">0</strong><small>Alta aptitud y actitud</small></div>
+        <div class="kpi"><span>🌱 Aprendices</span><strong id="talentPotentialCount">0</strong><small>Alta actitud, requiere desarrollo</small></div>
+        <div class="kpi warning"><span>⚠️ Cínicos</span><strong id="talentDifficultCount">0</strong><small>Alta aptitud, baja actitud</small></div>
+        <div class="kpi danger"><span>🚨 Problemas</span><strong id="talentLowCount">0</strong><small>Requiere plan urgente</small></div>
+      </div>
+
+      <div class="grid-2 talent-grid">
+        <div class="panel">
+          <div class="panel-title"><div><h3>Resumen por consultor</h3><small>Producción + cuadrante del periodo</small></div></div>
+          <div class="table-scroll talent-table-wrap">
+            <table class="talent-table">
+              <thead><tr><th>Consultor</th><th>Cuadrante</th><th>Proy.</th><th>Cerrados</th><th>Pendientes</th><th>Horas</th><th>Clientes</th></tr></thead>
+              <tbody id="talentSummaryTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title"><div><h3>Cuadrante Aptitud vs Actitud</h3><small>Posicionamiento del consultor seleccionado</small></div></div>
+          <div class="quadrant-box">
+            <div class="q-label top">ACTITUD +</div><div class="q-label bottom">ACTITUD -</div><div class="q-label left">APTITUD -</div><div class="q-label right">APTITUD +</div>
+            <div class="q-cell q-potential">🌱 Aprendiz</div>
+            <div class="q-cell q-star">⭐ Estrella</div>
+            <div class="q-cell q-low">🚨 Problema</div>
+            <div class="q-cell q-difficult">⚠️ Cínico</div>
+            <div id="talentDot" class="talent-dot">●</div>
+          </div>
+          <div id="talentClassification" class="talent-classification"></div>
+        </div>
+      </div>
+
+      <div class="grid-2 talent-grid">
+        <div class="panel">
+          <div class="panel-title"><div><h3>Producción operativa</h3><small>Datos calculados desde proyectos y cargabilidad</small></div></div>
+          <div id="talentProductionCards" class="production-cards"></div>
+          <div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Proyecto</th><th>Rol</th><th>Estado</th><th>Horas</th></tr></thead><tbody id="talentProjectsTable"></tbody></table></div>
+        </div>
+
+        <div class="panel form-panel talent-review-panel">
+          <div class="panel-title"><div><h3>Evaluación trimestral</h3><small>Escala 1 a 5</small></div><button class="btn red" onclick="saveTalentReview()">Guardar evaluación</button></div>
+          <h4>Aptitud · Saber hacer</h4>
+          <div id="aptitudeQuestions" class="review-questions"></div>
+          <h4>Actitud · Querer hacer</h4>
+          <div id="attitudeQuestions" class="review-questions"></div>
+          <label>Fortalezas</label><textarea id="talentStrengths" placeholder="Fortalezas observadas"></textarea>
+          <label>Áreas de mejora</label><textarea id="talentImprovements" placeholder="Áreas de mejora"></textarea>
+          <label>Plan de acción</label><textarea id="talentActionPlan" placeholder="Objetivos, fechas y compromisos"></textarea>
+          <label>Comentarios del Team Lead</label><textarea id="talentComments" placeholder="Comentarios para el informe trimestral"></textarea>
+          <div class="row-actions"><button class="btn dark" onclick="generateTalentText()">Generar resumen</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><div><h3>Resumen ejecutivo generado</h3><small>Texto base para evaluación trimestral</small></div></div>
+        <pre id="talentGeneratedReport" class="generated-report">Seleccione un consultor y guarde la evaluación para generar el resumen.</pre>
+      </div>
+    </section>
 
     <section id="users" class="view"><div class="two-cols"><div class="panel form-panel"><h3>⚙ Usuarios</h3><input type="hidden" id="userId"><label>Nombre</label><input id="userName"><label>Correo</label><input id="userEmail" type="email"><label>Contraseña inicial</label><input id="userPassword" type="password"><label>Rol</label><select id="userRole"></select><label>Estado</label><select id="userStatus"><option>Activo</option><option>Inactivo</option></select><div class="permission-grid"><label><input type="checkbox" id="permDashboard"> Dashboard</label><label><input type="checkbox" id="permClients"> Clientes</label><label><input type="checkbox" id="permAnalysts"> Analistas</label><label><input type="checkbox" id="permProjects"> Proyectos</label><label><input type="checkbox" id="permLoad"> Cargabilidad</label><label><input type="checkbox" id="permWeeks"> Semanas</label><label><input type="checkbox" id="permUsers"> Usuarios</label></div><div class="row-actions"><button class="btn red" onclick="saveAppUser()">Guardar usuario</button><button class="btn dark" onclick="clearUserForm()">Nuevo</button></div></div><div class="panel"><div class="panel-title"><h3>Usuarios del sistema</h3><small>Permisos por vista</small></div><div class="table-scroll"><table><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Vistas</th><th>Acciones</th></tr></thead><tbody id="usersTable"></tbody></table></div></div></div></section>
   </main>

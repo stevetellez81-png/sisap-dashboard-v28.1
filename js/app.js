@@ -1,4 +1,6 @@
 let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[]};
+const TALENT_APTITUDE=["Dominio Técnico","Autonomía","Calidad","Resolución de Problemas","Aprendizaje"];
+const TALENT_ATTITUDE=["Iniciativa","Resiliencia","Colaboración","Compromiso","Recepción de Feedback"];
 let loadRows=[];let currentSession=null;let currentProfile=null;
 let projectFilterState={analysts:new Set(),statuses:new Set(),countries:new Set()};
 let loadFilterState={analysts:new Set(),clients:new Set(),statuses:new Set()};
@@ -104,7 +106,7 @@ async function ensureProfile(){
   }
 }
 
-function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
+function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
   const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments]=await Promise.all([
@@ -123,7 +125,7 @@ async function loadAll(){try{
   DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
-function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderUsers();renderSidebarStatusWidget();}
+function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTalent();renderUsers();renderSidebarStatusWidget();}
 function fillSelects(){
   fill('clientCountry',DB.countries,'País','code',x=>countryLabel(x.code));fill('clientCommercial',activeCommercials(),'Comercial','id',x=>x.name);
   fill('userRole',DB.roles,'Rol','id',x=>x.name);
@@ -140,6 +142,7 @@ function fillSelects(){
   buildMultiFilter('loadFilterAnalystBox','Consultor',DB.analysts,'id',x=>x.name,loadFilterState.analysts,renderLoadMatrix);
   buildMultiFilter('loadFilterClientBox','Cliente',loadClients,'id',x=>x.name,loadFilterState.clients,renderLoadMatrix);
   buildMultiFilter('loadFilterStatusBox','Estado',loadStatuses,'id',x=>x.name,loadFilterState.statuses,renderLoadMatrix);
+  fillTalentControls();
 }
 function fill(id,items,ph,val,txt){const e=document.getElementById(id);if(!e)return;const c=e.value;e.innerHTML=`<option value="">${ph}</option>`+items.map(x=>`<option value="${x[val]}">${esc(txt(x))}</option>`).join('');e.value=c}
 function fillStatic(id,ph,items){const e=document.getElementById(id);if(!e)return;const c=e.value;e.innerHTML=`<option value="">${ph}</option>`+items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');e.value=c}
@@ -401,6 +404,146 @@ function generateWeeksForMonth(year,month){
 }
 function toISODate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function renderWeeks(){weeksTable.innerHTML=DB.weeks.map(w=>`<tr><td>${esc(w.week_label)}</td><td>${fmt(w.start_date)}</td><td>${fmt(w.end_date)}</td><td><button class="mini-btn delete" onclick="deleteWeek('${w.id}')">Eliminar</button></td></tr>`).join('')}async function deleteWeek(id){const w=DB.weeks.find(x=>x.id===id);if(!w)return;if(!confirm(`¿Eliminar la semana "${w.week_label}"?`))return;if(DB.loads.some(l=>l.week_id===id)){alert('No puede eliminarse porque tiene cargas registradas.');return;}const {error}=await db.from('weeks').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
+
+function fillTalentControls(){
+  const analyst=document.getElementById('talentAnalyst');
+  if(analyst){
+    const current=analyst.value;
+    const active=DB.analysts.filter(a=>(a.status||'Activo')==='Activo');
+    analyst.innerHTML=active.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+    analyst.value=active.some(a=>a.id===current)?current:(active[0]?.id||'');
+  }
+  const year=document.getElementById('talentYear');
+  if(year){
+    const current=year.value||String(new Date().getFullYear());
+    const years=new Set([new Date().getFullYear(),2025,2026,2027]);
+    DB.weeks.forEach(w=>{if(w.start_date)years.add(new Date(w.start_date+'T00:00:00').getFullYear())});
+    DB.projects.forEach(p=>{if(p.created_at)years.add(new Date(p.created_at).getFullYear())});
+    year.innerHTML=[...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join('');
+    year.value=[...years].map(String).includes(String(current))?current:String([...years].sort((a,b)=>b-a)[0]||new Date().getFullYear());
+  }
+}
+function talentStorage(){try{return JSON.parse(localStorage.getItem('sisapTalentReviews')||'{}')}catch(e){return {}}}
+function saveTalentStorage(data){localStorage.setItem('sisapTalentReviews',JSON.stringify(data||{}))}
+function talentKey(analystId,year,quarter){return `${analystId}|${year}|${quarter}`}
+function talentPeriod(){
+  const y=Number(document.getElementById('talentYear')?.value||new Date().getFullYear());
+  const q=Number(document.getElementById('talentQuarter')?.value||0);
+  const start=q?new Date(y,(q-1)*3,1):new Date(y,0,1);
+  const end=q?new Date(y,q*3,0):new Date(y,11,31);
+  start.setHours(0,0,0,0);end.setHours(23,59,59,999);
+  return {year:y,quarter:q,start,end,label:q?`Q${q} ${y}`:`Año ${y}`};
+}
+function weeksInTalentPeriod(){const p=talentPeriod();return DB.weeks.filter(w=>{if(!w.start_date)return false;const d=new Date(w.start_date+'T00:00:00');return d>=p.start&&d<=p.end;})}
+function loadReview(analystId,year,quarter){return talentStorage()[talentKey(analystId,year,quarter)]||null}
+function currentTalentReview(){const p=talentPeriod();return loadReview(document.getElementById('talentAnalyst')?.value,p.year,p.quarter)}
+function talentScoresFromReview(r){
+  const apt=TALENT_APTITUDE.reduce((s,q)=>s+num(r?.aptitude?.[q]||0),0);
+  const att=TALENT_ATTITUDE.reduce((s,q)=>s+num(r?.attitude?.[q]||0),0);
+  return {aptitude:apt,attitude:att};
+}
+function talentQuadrant(aptitude,attitude){
+  if(aptitude>=16&&attitude>=16)return {key:'star',label:'⭐ ESTRELLA',desc:'Alta Aptitud / Alta Actitud. Delegar, dar autonomía y preparar liderazgo.'};
+  if(aptitude<16&&attitude>=16)return {key:'potential',label:'🌱 APRENDIZ',desc:'Baja Aptitud / Alta Actitud. Requiere capacitación técnica y acompañamiento.'};
+  if(aptitude>=16&&attitude<16)return {key:'difficult',label:'⚠️ CÍNICO',desc:'Alta Aptitud / Baja Actitud. Requiere feedback de comportamiento y seguimiento cercano.'};
+  return {key:'low',label:'🚨 PROBLEMA',desc:'Baja Aptitud / Baja Actitud. Requiere plan de mejora urgente.'};
+}
+function talentProduction(analystId){
+  const weekIds=new Set(weeksInTalentPeriod().map(w=>w.id));
+  const periodLoads=DB.loads.filter(l=>l.analyst_id===analystId&&weekIds.has(l.week_id)&&isActiveLoad(l));
+  const loadProjectIds=new Set(periodLoads.map(l=>l.project_id).filter(Boolean));
+  const assignedProjectIds=new Set(DB.assignments.filter(a=>a.analyst_id===analystId).map(a=>a.project_id));
+  const projectIds=new Set([...loadProjectIds]);
+  if(projectIds.size===0)assignedProjectIds.forEach(id=>projectIds.add(id));
+  const projects=[...projectIds].map(id=>DB.projects.find(p=>p.id===id)).filter(Boolean);
+  const hours=periodLoads.reduce((s,l)=>s+num(l.planned_hours),0);
+  const closed=projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()==='finalizado').length;
+  const pending=projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()!=='finalizado').length;
+  const clients=new Set(projects.map(p=>p.client_id).filter(Boolean)).size;
+  const leader=DB.assignments.filter(a=>a.analyst_id===analystId&&a.role==='Líder'&&projectIds.has(a.project_id)).length;
+  const support=DB.assignments.filter(a=>a.analyst_id===analystId&&a.role!=='Líder'&&projectIds.has(a.project_id)).length;
+  const projectRows=projects.map(p=>{
+    const assignment=DB.assignments.find(a=>a.project_id===p.id&&a.analyst_id===analystId);
+    const projectHours=periodLoads.filter(l=>l.project_id===p.id).reduce((s,l)=>s+num(l.planned_hours),0);
+    return {project:p,role:assignment?.role||'-',hours:projectHours};
+  }).sort((a,b)=>b.hours-a.hours||String(a.project.name).localeCompare(String(b.project.name)));
+  return {projects,projectRows,total:projects.length,closed,pending,clients,hours,leader,support};
+}
+function renderTalent(){
+  fillTalentControls();
+  renderTalentQuestions();
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  if(!analystId)return;
+  const p=talentPeriod();
+  const store=talentStorage();
+  const counts={star:0,potential:0,difficult:0,low:0};
+  const active=DB.analysts.filter(a=>(a.status||'Activo')==='Activo');
+  const rows=active.map(a=>{
+    const r=store[talentKey(a.id,p.year,p.quarter)];
+    const scores=talentScoresFromReview(r);
+    const has=r&&scores.aptitude>0&&scores.attitude>0;
+    const q=has?talentQuadrant(scores.aptitude,scores.attitude):{key:'none',label:'Sin evaluar',desc:'Pendiente'};
+    if(has)counts[q.key]++;
+    const prod=talentProduction(a.id);
+    return `<tr class="${a.id===analystId?'selected-row':''}" onclick="talentAnalyst.value='${a.id}';renderTalent()"><td><strong>${esc(a.name)}</strong><small>${esc(a.role||'Consultor')}</small></td><td><span class="talent-badge ${q.key}">${esc(q.label)}</span></td><td>${prod.total}</td><td>${prod.closed}</td><td>${prod.pending}</td><td>${Math.round(prod.hours)}h</td><td>${prod.clients}</td></tr>`;
+  });
+  document.getElementById('talentSummaryTable').innerHTML=rows.join('');
+  talentStarCount.textContent=counts.star;talentPotentialCount.textContent=counts.potential;talentDifficultCount.textContent=counts.difficult;talentLowCount.textContent=counts.low;
+  renderTalentDetail();
+}
+function renderTalentQuestions(){
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  const p=talentPeriod();
+  const r=loadReview(analystId,p.year,p.quarter)||{};
+  const make=(arr,cat)=>arr.map(q=>`<label class="review-row"><span>${esc(q)}</span><select data-cat="${cat}" data-question="${esc(q)}">${[1,2,3,4,5].map(n=>`<option value="${n}" ${num(r?.[cat]?.[q]||3)===n?'selected':''}>${n}</option>`).join('')}</select></label>`).join('');
+  const apt=document.getElementById('aptitudeQuestions'),att=document.getElementById('attitudeQuestions');
+  if(apt)apt.innerHTML=make(TALENT_APTITUDE,'aptitude');
+  if(att)att.innerHTML=make(TALENT_ATTITUDE,'attitude');
+  if(document.getElementById('talentStrengths'))talentStrengths.value=r.strengths||'';
+  if(document.getElementById('talentImprovements'))talentImprovements.value=r.improvements||'';
+  if(document.getElementById('talentActionPlan'))talentActionPlan.value=r.actionPlan||'';
+  if(document.getElementById('talentComments'))talentComments.value=r.comments||'';
+}
+function renderTalentDetail(){
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  const analyst=DB.analysts.find(a=>a.id===analystId);
+  const p=talentPeriod();
+  const r=loadReview(analystId,p.year,p.quarter)||{};
+  const scores=talentScoresFromReview(r);
+  const q=talentQuadrant(scores.aptitude,scores.attitude);
+  const prod=talentProduction(analystId);
+  const dot=document.getElementById('talentDot');
+  if(dot){dot.style.left=`${Math.max(4,Math.min(96,(scores.aptitude/25)*100))}%`;dot.style.bottom=`${Math.max(4,Math.min(96,(scores.attitude/25)*100))}%`;dot.title=`${analyst?.name||''}: Aptitud ${scores.aptitude}, Actitud ${scores.attitude}`;}
+  talentClassification.innerHTML=`<strong>${esc(analyst?.name||'Consultor')}</strong><span>${esc(p.label)}</span><h2>${esc(q.label)}</h2><p>${esc(q.desc)}</p><div class="score-line"><b>Aptitud:</b> ${scores.aptitude}/25 · <b>Actitud:</b> ${scores.attitude}/25</div>`;
+  talentProductionCards.innerHTML=`<div><strong>${prod.total}</strong><span>Proyectos</span></div><div><strong>${prod.closed}</strong><span>Cerrados</span></div><div><strong>${prod.pending}</strong><span>Pendientes</span></div><div><strong>${Math.round(prod.hours)}h</strong><span>Horas</span></div><div><strong>${prod.clients}</strong><span>Clientes</span></div><div><strong>${prod.leader}/${prod.support}</strong><span>Líder / Apoyo</span></div>`;
+  talentProjectsTable.innerHTML=prod.projectRows.map(x=>{const c=DB.clients.find(c=>c.id===x.project.client_id);return `<tr><td>${esc(c?.name||x.project.clients?.name||'-')}</td><td><strong>${esc(x.project.name)}</strong></td><td>${esc(x.role)}</td><td><span class="badge ${normalizeProjectStatus(x.project.status).toLowerCase()==='finalizado'?'green':'yellow'}">${esc(normalizeProjectStatus(x.project.status)||'-')}</span></td><td>${Math.round(x.hours)}h</td></tr>`}).join('')||'<tr><td colspan="5">Sin proyectos/cargas en el periodo seleccionado.</td></tr>';
+  generateTalentText(false);
+}
+function collectTalentReview(){
+  const aptitude={},attitude={};
+  document.querySelectorAll('#aptitudeQuestions select').forEach(s=>aptitude[s.dataset.question]=num(s.value));
+  document.querySelectorAll('#attitudeQuestions select').forEach(s=>attitude[s.dataset.question]=num(s.value));
+  const p=talentPeriod();
+  return {analyst_id:talentAnalyst.value,year:p.year,quarter:p.quarter,aptitude,attitude,strengths:talentStrengths.value,improvements:talentImprovements.value,actionPlan:talentActionPlan.value,comments:talentComments.value,updated_at:new Date().toISOString()};
+}
+function saveTalentReview(){
+  const r=collectTalentReview();
+  if(!r.analyst_id)return toast('Seleccione consultor');
+  const data=talentStorage();data[talentKey(r.analyst_id,r.year,r.quarter)]=r;saveTalentStorage(data);
+  renderTalent();toast('Evaluación guardada localmente');
+}
+function generateTalentText(showToast=true){
+  const analystId=document.getElementById('talentAnalyst')?.value;
+  const analyst=DB.analysts.find(a=>a.id===analystId);if(!analyst)return;
+  const p=talentPeriod();
+  const r=loadReview(analystId,p.year,p.quarter)||collectTalentReview();
+  const s=talentScoresFromReview(r);const q=talentQuadrant(s.aptitude,s.attitude);const prod=talentProduction(analystId);
+  const text=`Evaluación trimestral SISAP - ${analyst.name}\nPeriodo: ${p.label}\n\nResultado del cuadrante: ${q.label}\nAptitud: ${s.aptitude}/25\nActitud: ${s.attitude}/25\n\nProducción del periodo:\n- Proyectos asignados: ${prod.total}\n- Proyectos cerrados: ${prod.closed}\n- Proyectos pendientes: ${prod.pending}\n- Horas cargadas: ${Math.round(prod.hours)}h\n- Clientes atendidos: ${prod.clients}\n- Participación líder/apoyo: ${prod.leader}/${prod.support}\n\nFortalezas:\n${r.strengths||'Pendiente de documentar.'}\n\nÁreas de mejora:\n${r.improvements||'Pendiente de documentar.'}\n\nPlan de acción:\n${r.actionPlan||'Pendiente de definir.'}\n\nComentarios del Team Lead:\n${r.comments||'Sin comentarios adicionales.'}`;
+  const box=document.getElementById('talentGeneratedReport');if(box)box.textContent=text;
+  if(showToast)toast('Resumen generado');
+  return text;
+}
+
 function renderUsers(){usersTable.innerHTML=DB.users.map(u=>{const views=[u.can_dashboard?'Dashboard':'',u.can_clients?'Clientes':'',u.can_analysts?'Analistas':'',u.can_projects?'Proyectos':'',u.can_load?'Carga':'',u.can_weeks?'Semanas':'',u.can_users?'Usuarios':''].filter(Boolean).join(', ');return `<tr><td><strong>${esc(u.full_name)}</strong></td><td>${esc(u.email)}</td><td>${esc(u.roles?.name||'-')}</td><td><span class="badge ${u.status==='Activo'?'green':'red'}">${esc(u.status)}</span></td><td>${esc(views)}</td><td class="actions"><button class="mini-btn" onclick="editAppUser('${u.id}')">Editar</button><button class="mini-btn delete" onclick="disableAppUser('${u.id}')">Inactivar</button></td></tr>`}).join('')}
 async function saveAppUser(){const id=userId.value,email=v('userEmail'),password=v('userPassword');const payload={email,full_name:v('userName'),role_id:v('userRole')||null,status:v('userStatus'),can_dashboard:permDashboard.checked,can_clients:permClients.checked,can_analysts:permAnalysts.checked,can_projects:permProjects.checked,can_load:permLoad.checked,can_weeks:permWeeks.checked,can_users:permUsers.checked};if(!payload.email||!payload.full_name)return toast('Nombre y correo requeridos');if(!id&&!password)return toast('Contraseña inicial requerida');if(!id){const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:payload.full_name}}});if(error)return toast(error.message);payload.auth_user_id=data.user?.id||null;}const r=id?await db.from('app_users').update(payload).eq('id',id):await db.from('app_users').insert([payload]);if(r.error)return toast(r.error.message);clearUserForm();await loadAll();toast('Usuario guardado')}
 function editAppUser(id){const u=DB.users.find(x=>x.id===id);userId.value=u.id;userName.value=u.full_name||'';userEmail.value=u.email||'';userPassword.value='';userRole.value=u.role_id||'';userStatus.value=u.status||'Activo';permDashboard.checked=!!u.can_dashboard;permClients.checked=!!u.can_clients;permAnalysts.checked=!!u.can_analysts;permProjects.checked=!!u.can_projects;permLoad.checked=!!u.can_load;permWeeks.checked=!!u.can_weeks;permUsers.checked=!!u.can_users}async function disableAppUser(id){await db.from('app_users').update({status:'Inactivo'}).eq('id',id);await loadAll()}function clearUserForm(){userId.value='';userName.value='';userEmail.value='';userPassword.value='';userRole.value='';userStatus.value='Activo';permDashboard.checked=true;permClients.checked=false;permAnalysts.checked=false;permProjects.checked=true;permLoad.checked=true;permWeeks.checked=false;permUsers.checked=false}
