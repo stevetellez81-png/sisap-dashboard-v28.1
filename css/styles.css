@@ -677,3 +677,20 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .heatmap-table tbody tr{
   animation:softIn .22s ease both;
 }
+
+
+/* ===== V29.5 Cargabilidad como planeación ===== */
+.load-actions-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.load-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.matrix{max-height:580px;overflow:auto}
+.matrix table{width:max-content;min-width:100%;table-layout:fixed}
+.matrix th,.matrix td{white-space:nowrap;vertical-align:middle}
+.matrix th:nth-child(1),.matrix td:nth-child(1){width:180px;min-width:180px}
+.matrix th:nth-child(2),.matrix td:nth-child(2){width:250px;min-width:250px}
+.matrix th:nth-child(3),.matrix td:nth-child(3){width:340px;min-width:340px}
+.matrix th:nth-child(n+4),.matrix td:nth-child(n+4){width:115px;min-width:115px;text-align:center}
+.matrix select{height:38px;padding:0 10px;border-radius:12px;overflow:hidden;text-overflow:ellipsis}
+.matrix input[type=number]{height:38px;padding:0 8px;border-radius:12px;text-align:center;font-weight:800}
+.matrix tbody tr:hover{background:#f8fafc}
+.matrix .mini-btn{padding:9px 12px}
+@media(max-width:900px){.load-filters{grid-template-columns:1fr}.load-actions-top{width:100%;justify-content:flex-start}}

@@ -292,36 +292,34 @@ function renderProjects(){
   projectsTable.innerHTML=rows.map(p=>{const pct=Math.round(percent(p));const code=normalizeCountry(p.country_code);const rowClass=pct>100?'overloaded':pct>=90?'risk':'';const pctClass=pct>100?'pct-over':pct>=90?'pct-risk':'pct-ok';const st=(p.status||'').toLowerCase().includes('ejec')?'blue':(p.status||'').toLowerCase().includes('final')?'green':'';return `<tr class="${rowClass}"><td><input type="checkbox"></td><td class="country-cell">${flagFor(code)} ${esc(code||'-')}</td><td class="client-name">${esc(p.clients?.name||'-')}</td><td class="project-name">${esc(p.name)}</td><td>${Math.round(num(p.contracted_hours||p.estimated_hours))}</td><td>${Math.round(num(p.consumed_hours))}</td><td><span class="pct-pill ${pctClass}">${pct}%</span></td><td>${esc(projectAnalysts(p.id)||'-')}</td><td><span class="badge ${st}">${esc(p.status||'-')}</span></td><td>${esc(p.observation||'-')}</td><td class="actions"><button class="mini-btn" onclick="openProjectModal('${p.id}')">Editar</button><button class="mini-btn delete" onclick="deleteProject('${p.id}')">Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="11">Sin proyectos para mostrar.</td></tr>';
 }
 function buildLoadRows(){
+  const weeks=displayWeeks();
+  const visibleWeekIds=new Set(weeks.map(w=>w.id));
   const activeIds=new Set(activeProjects().map(p=>p.id));
   const map=new Map();
 
-  // La cargabilidad se construye desde la asignación formal del proyecto.
-  // weekly_project_load solo rellena las horas proyectadas si ya existen.
-  DB.assignments
-    .filter(a=>a.analyst_id&&a.project_id&&activeIds.has(a.project_id))
-    .forEach(a=>{
-      const key=`${a.analyst_id}|${a.project_id}`;
-      if(!map.has(key))map.set(key,{analyst_id:a.analyst_id,project_id:a.project_id,hours:{}});
-    });
-
-  // Conserva cargas existentes aunque falte una asignación, siempre que el proyecto siga activo.
+  // V29.5: Cargabilidad es planeación de capacidad, no asignación formal.
+  // La fuente principal es weekly_project_load: Analista + Proyecto + Semana + Horas presupuestadas.
+  // project_assignments se usa en Proyectos, no para decidir qué puede presupuestarse aquí.
   DB.loads
-    .filter(l=>l.analyst_id&&l.project_id&&activeIds.has(l.project_id))
+    .filter(l=>l.analyst_id&&l.project_id&&activeIds.has(l.project_id)&&visibleWeekIds.has(l.week_id))
     .forEach(l=>{
       const key=`${l.analyst_id}|${l.project_id}`;
       if(!map.has(key))map.set(key,{analyst_id:l.analyst_id,project_id:l.project_id,hours:{}});
       map.get(key).hours[l.week_id]=Math.round(num(l.planned_hours));
     });
 
-  loadRows=[...map.values()].sort((a,b)=>{
-    const an=(DB.analysts.find(x=>x.id===a.analyst_id)?.name||'').localeCompare(DB.analysts.find(x=>x.id===b.analyst_id)?.name||'');
-    if(an!==0)return an;
-    const pa=DB.projects.find(x=>x.id===a.project_id),pb=DB.projects.find(x=>x.id===b.project_id);
-    const ca=DB.clients.find(x=>x.id===pa?.client_id)?.name||'';
-    const cb=DB.clients.find(x=>x.id===pb?.client_id)?.name||'';
-    return ca.localeCompare(cb)||(pa?.name||'').localeCompare(pb?.name||'');
-  });
-  if(loadRows.length===0)addLoadRow()
+  // Oculta ruido heredado: filas existentes con 0h en todas las semanas visibles.
+  // Si el usuario quiere proyectar un caso nuevo, usa Agregar fila.
+  loadRows=[...map.values()].filter(r=>weeks.some(w=>num(r.hours[w.id])>0)).sort(sortLoadRows);
+  if(loadRows.length===0 && activeProjects().length && activeAnalysts().length)addLoadRow(false);
+}
+function sortLoadRows(a,b){
+  const an=(DB.analysts.find(x=>x.id===a.analyst_id)?.name||'').localeCompare(DB.analysts.find(x=>x.id===b.analyst_id)?.name||'');
+  if(an!==0)return an;
+  const pa=DB.projects.find(x=>x.id===a.project_id),pb=DB.projects.find(x=>x.id===b.project_id);
+  const ca=DB.clients.find(x=>x.id===pa?.client_id)?.name||'';
+  const cb=DB.clients.find(x=>x.id===pb?.client_id)?.name||'';
+  return ca.localeCompare(cb)||(pa?.name||'').localeCompare(pb?.name||'');
 }
 function normalizeProjectStatus(status){
   const clean=String(status||'').trim();
@@ -332,9 +330,10 @@ function normalizeProjectStatus(status){
 }
 function isLoadableProject(p){
   const st=normalizeProjectStatus(p?.status).toLowerCase();
-  return st && st!=='finalizado';
+  return st && st!=='finalizado' && st!=='en pausa' && st!=='suspendido';
 }
 function activeProjects(){return DB.projects.filter(isLoadableProject)}
+function activeAnalysts(){return DB.analysts.filter(a=>(a.status||'Activo')==='Activo')}
 function renderLoadMatrix(){
   const weeks=displayWeeks(),q=v('loadSearch').toLowerCase();
   const fa=loadFilterState.analysts,fc=loadFilterState.clients,fs=loadFilterState.statuses;
@@ -345,9 +344,15 @@ function renderLoadMatrix(){
     const st=normalizeProjectStatus(p?.status);
     return p&&isLoadableProject(p)&&(!q||txt.includes(q))&&(fa.size===0||fa.has(r.analyst_id))&&(fc.size===0||fc.has(p?.client_id))&&(fs.size===0||fs.has(st));
   });
-  loadBody.innerHTML=filtered.map(({r,idx})=>{const p=DB.projects.find(x=>x.id===r.project_id);return `<tr><td>${selectHtml('analyst',idx,DB.analysts,r.analyst_id)}</td><td>${selectHtml('client',idx,DB.clients,p?.client_id||'')}</td><td>${selectHtml('project',idx,activeProjects(),r.project_id)}</td>${weeks.map(w=>`<td><input type="number" min="0" step="1" value="${Math.round(num(r.hours[w.id]||0))}" onchange="setLoadHour(${idx},'${w.id}',this.value)"></td>`).join('')}<td><button class="mini-btn" onclick="removeLoadRow(${idx})">Borrar</button></td></tr>`}).join('')||'<tr><td colspan="20">Sin cargas activas para mostrar.</td></tr>';
+  loadBody.innerHTML=filtered.map(({r,idx})=>{const p=DB.projects.find(x=>x.id===r.project_id);return `<tr><td>${selectHtml('analyst',idx,activeAnalysts(),r.analyst_id)}</td><td>${selectHtml('client',idx,DB.clients,p?.client_id||'')}</td><td>${selectHtml('project',idx,activeProjects(),r.project_id)}</td>${weeks.map(w=>`<td><input type="number" min="0" step="1" value="${Math.round(num(r.hours[w.id]||0))}" onchange="setLoadHour(${idx},'${w.id}',this.value)"></td>`).join('')}<td><button class="mini-btn" onclick="removeLoadRow(${idx})">Borrar</button></td></tr>`}).join('')||'<tr><td colspan="20">Sin cargas activas para mostrar.</td></tr>';
 }
-function selectHtml(type,i,items,value){const onchange=type==='analyst'?`loadRows[${i}].analyst_id=this.value`:type==='project'?`loadRows[${i}].project_id=this.value`:`changeLoadClient(${i},this.value)`;return `<select onchange="${onchange}">${items.map(x=>`<option value="${x.id}" ${x.id===value?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}function changeLoadClient(i,cid){const p=activeProjects().find(x=>x.client_id===cid);if(p)loadRows[i].project_id=p.id;renderLoadMatrix()}function setLoadHour(i,wid,val){loadRows[i].hours[wid]=Math.round(num(val))}function addLoadRow(){loadRows.push({analyst_id:DB.analysts[0]?.id||'',project_id:activeProjects()[0]?.id||'',hours:{}});renderLoadMatrix()}function removeLoadRow(i){loadRows.splice(i,1);renderLoadMatrix()}async function saveLoadMatrix(){
+function selectHtml(type,i,items,value){const onchange=type==='analyst'?`loadRows[${i}].analyst_id=this.value`:type==='project'?`loadRows[${i}].project_id=this.value`:`changeLoadClient(${i},this.value)`;return `<select onchange="${onchange}">${items.map(x=>`<option value="${x.id}" ${x.id===value?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}
+function changeLoadClient(i,cid){const p=activeProjects().find(x=>x.client_id===cid);if(p)loadRows[i].project_id=p.id;renderLoadMatrix()}
+function setLoadHour(i,wid,val){loadRows[i].hours[wid]=Math.max(0,Math.round(num(val)))}
+function addLoadRow(render=true){loadRows.push({analyst_id:activeAnalysts()[0]?.id||DB.analysts[0]?.id||'',project_id:activeProjects()[0]?.id||'',hours:{}});if(render)renderLoadMatrix()}
+function removeLoadRow(i){loadRows.splice(i,1);renderLoadMatrix()}
+function clearLoadFilters(){loadSearch.value='';loadFilterState.analysts.clear();loadFilterState.clients.clear();loadFilterState.statuses.clear();fillSelects();renderLoadMatrix()}
+async function saveLoadMatrix(){
   const weeks=displayWeeks(),activeIds=new Set(activeProjects().map(p=>p.id));
   const payload=[];
   loadRows.filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)).forEach(r=>weeks.forEach(w=>payload.push({analyst_id:r.analyst_id,project_id:r.project_id,week_id:w.id,planned_hours:Math.round(num(r.hours[w.id]||0)),real_hours:0})));
@@ -554,7 +559,7 @@ async function deleteProject(id){
   }
 }
 function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))}))}
-function isActiveLoad(load){return normalizeProjectStatus(load.projects?.status).toLowerCase()!=='finalizado'}
+function isActiveLoad(load){return isLoadableProject(load.projects)}
 function sumWeek(wid){return DB.loads.filter(l=>l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function sumAnalystWeek(aid,wid){return DB.loads.filter(l=>l.analyst_id===aid&&l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function pillClass(h,c){if(h>=c)return'red';if(h>=c*.9)return'yellow';return'green'}function projectAnalysts(pid){
