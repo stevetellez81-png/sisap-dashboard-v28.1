@@ -1,6 +1,22 @@
 let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[]};
-const TALENT_APTITUDE=["Dominio Técnico","Autonomía","Calidad","Resolución de Problemas","Aprendizaje"];
-const TALENT_ATTITUDE=["Iniciativa","Resiliencia","Colaboración","Compromiso","Recepción de Feedback"];
+const TALENT_QUESTION_BANK={
+  aptitude:[
+    {key:"Dominio Técnico",title:"Dominio Técnico",description:"Posee los conocimientos y habilidades necesarios para realizar sus tareas con calidad y sin errores frecuentes.",scale:["Requiere acompañamiento constante","Tiene conocimientos básicos","Cumple adecuadamente con sus funciones","Demuestra dominio sólido en su área","Referente técnico para el equipo"]},
+    {key:"Autonomía",title:"Autonomía",description:"Es capaz de completar sus responsabilidades con mínima supervisión y gestionar sus entregables sin seguimiento permanente.",scale:["Necesita supervisión permanente","Requiere apoyo frecuente","Trabaja de forma independiente en tareas habituales","Gestiona actividades complejas por sí mismo","Lidera iniciativas sin necesidad de supervisión"]},
+    {key:"Calidad",title:"Calidad",description:"Sus entregables cumplen los estándares definidos, son claros, completos y requieren pocas correcciones.",scale:["Presenta errores frecuentes","Requiere múltiples correcciones","Cumple los estándares mínimos","Entrega trabajos de alta calidad","Calidad excepcional y consistente"]},
+    {key:"Resolución de Problemas",title:"Resolución de Problemas",description:"Identifica causas raíz, analiza escenarios y propone soluciones efectivas en tiempos razonables.",scale:["Tiene dificultad para resolver problemas","Requiere apoyo constante","Resuelve problemas habituales","Resuelve problemas complejos","Es referente para resolver situaciones críticas"]},
+    {key:"Aprendizaje",title:"Aprendizaje",description:"Aprende nuevas herramientas, metodologías y conocimientos, y los aplica rápidamente en el trabajo.",scale:["Muestra resistencia al aprendizaje","Aprende lentamente","Aprende a ritmo esperado","Aprende rápidamente","Aprende y comparte conocimiento con el equipo"]}
+  ],
+  attitude:[
+    {key:"Iniciativa",title:"Iniciativa",description:"Propone ideas, identifica oportunidades de mejora y actúa antes de que se le solicite.",scale:["Espera instrucciones para actuar","Propone mejoras ocasionalmente","Cumple y aporta cuando se le solicita","Propone mejoras con frecuencia","Impulsa mejoras y moviliza al equipo"]},
+    {key:"Resiliencia",title:"Resiliencia",description:"Mantiene una actitud positiva y constructiva ante presión, cambios, clientes difíciles o situaciones de alta exigencia.",scale:["Se bloquea ante la presión","Le cuesta adaptarse al cambio","Mantiene estabilidad en situaciones normales","Se adapta bien bajo presión","Es ejemplo de calma y enfoque ante crisis"]},
+    {key:"Colaboración",title:"Colaboración",description:"Ayuda a sus compañeros, comparte conocimiento y contribuye a un buen clima de trabajo.",scale:["Trabaja de forma aislada","Colabora solo cuando se le pide","Colabora adecuadamente","Ayuda activamente al equipo","Eleva el desempeño del equipo"]},
+    {key:"Compromiso",title:"Compromiso",description:"Demuestra responsabilidad, cumplimiento y alineación con los objetivos de SISAP, del equipo y del cliente.",scale:["Bajo sentido de responsabilidad","Cumple de forma irregular","Cumple con lo esperado","Demuestra alto compromiso","Asume los objetivos como propios"]},
+    {key:"Recepción de Feedback",title:"Recepción de Feedback",description:"Escucha críticas constructivas, acepta observaciones y convierte el feedback en acciones concretas de mejora.",scale:["Rechaza o evita el feedback","Le cuesta aceptar observaciones","Acepta feedback básico","Aplica mejoras a partir del feedback","Busca feedback y mejora continuamente"]}
+  ]
+};
+const TALENT_APTITUDE=TALENT_QUESTION_BANK.aptitude.map(q=>q.key);
+const TALENT_ATTITUDE=TALENT_QUESTION_BANK.attitude.map(q=>q.key);
 let loadRows=[];let currentSession=null;let currentProfile=null;
 let projectFilterState={analysts:new Set(),statuses:new Set(),countries:new Set()};
 let loadFilterState={analysts:new Set(),clients:new Set(),statuses:new Set()};
@@ -522,10 +538,25 @@ function renderTalentQuestions(){
   const analystId=document.getElementById('talentAnalyst')?.value;
   const p=talentPeriod();
   const r=loadReview(analystId,p.year,p.quarter)||{};
-  const make=(arr,cat)=>arr.map(q=>`<label class="review-row"><span>${esc(q)}</span><select data-cat="${cat}" data-question="${esc(q)}">${[1,2,3,4,5].map(n=>`<option value="${n}" ${num(r?.[cat]?.[q]||3)===n?'selected':''}>${n}</option>`).join('')}</select></label>`).join('');
+  const make=(items,cat)=>items.map(item=>{
+    const selected=num(r?.[cat]?.[item.key]||3);
+    return `<div class="review-card" data-cat="${cat}" data-question="${esc(item.key)}">
+      <div class="review-card-head">
+        <div>
+          <strong>${esc(item.title)}</strong>
+          <p>${esc(item.description)}</p>
+        </div>
+        <span class="selected-score" id="score_${cat}_${slug(item.key)}">${selected}/5</span>
+      </div>
+      <div class="rating-scale" role="group" aria-label="${esc(item.title)}">
+        ${[1,2,3,4,5].map(n=>`<button type="button" class="score-btn score-${n} ${selected===n?'selected':''}" data-cat="${cat}" data-question="${esc(item.key)}" data-score="${n}" onclick="setTalentScore(this)"><b>${n}</b><small>${esc(item.scale[n-1])}</small></button>`).join('')}
+      </div>
+      <textarea class="question-comment" data-comment-cat="${cat}" data-comment-question="${esc(item.key)}" placeholder="Comentario opcional sobre ${esc(item.title).toLowerCase()}..."></textarea>
+    </div>`;
+  }).join('');
   const apt=document.getElementById('aptitudeQuestions'),att=document.getElementById('attitudeQuestions');
-  if(apt)apt.innerHTML=make(TALENT_APTITUDE,'aptitude');
-  if(att)att.innerHTML=make(TALENT_ATTITUDE,'attitude');
+  if(apt)apt.innerHTML=make(TALENT_QUESTION_BANK.aptitude,'aptitude');
+  if(att)att.innerHTML=make(TALENT_QUESTION_BANK.attitude,'attitude');
   if(document.getElementById('talentAchievements'))talentAchievements.value=r.achievements||'';
   if(document.getElementById('talentChallenges'))talentChallenges.value=r.challenges||'';
   if(document.getElementById('talentImpactProjects'))talentImpactProjects.value=r.impactProjects||'';
@@ -537,6 +568,13 @@ function renderTalentQuestions(){
   if(document.getElementById('talentActionPlan'))talentActionPlan.value=r.actionPlan||'';
   if(document.getElementById('talentComments'))talentComments.value=r.comments||'';
 }
+function setTalentScore(btn){
+  const cat=btn.dataset.cat, question=btn.dataset.question, score=Number(btn.dataset.score||0);
+  document.querySelectorAll(`.score-btn[data-cat="${cat}"][data-question="${CSS.escape(question)}"]`).forEach(b=>b.classList.toggle('selected',Number(b.dataset.score)===score));
+  const pill=document.getElementById(`score_${cat}_${slug(question)}`);if(pill)pill.textContent=`${score}/5`;
+  renderTalentDetail();
+}
+function slug(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_')}
 function renderTalentDetail(){
   const analystId=document.getElementById('talentAnalyst')?.value;
   const analyst=DB.analysts.find(a=>a.id===analystId);
@@ -555,8 +593,8 @@ function renderTalentDetail(){
 }
 function collectTalentReview(){
   const aptitude={},attitude={};
-  document.querySelectorAll('#aptitudeQuestions select').forEach(s=>aptitude[s.dataset.question]=num(s.value));
-  document.querySelectorAll('#attitudeQuestions select').forEach(s=>attitude[s.dataset.question]=num(s.value));
+  document.querySelectorAll('#aptitudeQuestions .review-card').forEach(row=>{const q=row.dataset.question;const b=row.querySelector('.score-btn.selected');aptitude[q]=num(b?.dataset.score||3);});
+  document.querySelectorAll('#attitudeQuestions .review-card').forEach(row=>{const q=row.dataset.question;const b=row.querySelector('.score-btn.selected');attitude[q]=num(b?.dataset.score||3);});
   const p=talentPeriod();
   return {analyst_id:talentAnalyst.value,year:p.year,quarter:p.quarter,aptitude,attitude,
     achievements:talentAchievements?.value||'',
@@ -603,8 +641,8 @@ async function saveTalentReview(){
   }
 
   const answers=[];
-  TALENT_APTITUDE.forEach(qLabel=>answers.push({review_id:data.id,category:'aptitude',question_key:qLabel,question_label:qLabel,score:num(r.aptitude[qLabel]||0)}));
-  TALENT_ATTITUDE.forEach(qLabel=>answers.push({review_id:data.id,category:'attitude',question_key:qLabel,question_label:qLabel,score:num(r.attitude[qLabel]||0)}));
+  TALENT_QUESTION_BANK.aptitude.forEach(q=>answers.push({review_id:data.id,category:'aptitude',question_key:q.key,question_label:q.title,score:num(r.aptitude[q.key]||0),comment:(document.querySelector(`[data-comment-cat="aptitude"][data-comment-question="${CSS.escape(q.key)}"]`)?.value||'')}));
+  TALENT_QUESTION_BANK.attitude.forEach(q=>answers.push({review_id:data.id,category:'attitude',question_key:q.key,question_label:q.title,score:num(r.attitude[q.key]||0),comment:(document.querySelector(`[data-comment-cat="attitude"][data-comment-question="${CSS.escape(q.key)}"]`)?.value||'')}));
   const delAnswers=await db.from('performance_answers').delete().eq('review_id',data.id);
   if(delAnswers.error)console.warn(delAnswers.error);
   if(answers.length){
