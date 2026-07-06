@@ -1,4 +1,4 @@
-let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[]};
+let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[],analystWeeklyHours:[],analystAwarenessTraining:[],analystCertificationGoals:[]};
 const TALENT_QUESTION_BANK={
   aptitude:[
     {key:"Dominio Técnico",title:"Dominio Técnico",description:"Posee los conocimientos y habilidades necesarios para realizar sus tareas con calidad y sin errores frecuentes.",scale:["Requiere acompañamiento constante","Tiene conocimientos básicos","Cumple adecuadamente con sus funciones","Demuestra dominio sólido en su área","Referente técnico para el equipo"]},
@@ -125,7 +125,7 @@ async function ensureProfile(){
 function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
-  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications]=await Promise.all([
+  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals]=await Promise.all([
     db.from('countries').select('*').order('code'),
     db.from('commercials').select('*').order('name'),
     db.from('clients').select('*, commercials(name)').order('name'),
@@ -139,10 +139,13 @@ async function loadAll(){try{
     db.from('performance_reviews').select('*').order('updated_at',{ascending:false}),
     db.from('performance_answers').select('*').order('created_at'),
     db.from('performance_action_plans').select('*').order('created_at'),
-    db.from('analyst_certifications').select('*').order('expiration_date',{ascending:true,nullsFirst:false})
+    db.from('analyst_certifications').select('*').order('expiration_date',{ascending:true,nullsFirst:false}),
+    db.from('analyst_weekly_hours').select('*, analysts(id,name), weeks(id,week_label,start_date,end_date)').order('created_at'),
+    db.from('analyst_awareness_training').select('*').order('period_year',{ascending:false}).order('period_month',{ascending:false}),
+    db.from('analyst_certification_goals').select('*, analyst_certifications(certification_name,status,expiration_date)').order('period_year',{ascending:false})
   ]);
-  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications].forEach(r=>{if(r.error)throw r.error});
-  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[]};
+  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals].forEach(r=>{if(r.error)throw r.error});
+  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
 function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTalent();renderUsers();renderSidebarStatusWidget();}
@@ -319,24 +322,30 @@ function buildLoadRows(){
   renderWeekMonthControls();
   const weeks=displayWeeks('load');
   const visibleWeekIds=new Set(weeks.map(w=>w.id));
-  const activeIds=new Set(activeProjects().map(p=>p.id));
   const map=new Map();
 
-  // V29.5: Cargabilidad es planeación de capacidad, no asignación formal.
-  // La fuente principal es weekly_project_load: Analista + Proyecto + Semana + Horas presupuestadas.
-  // project_assignments se usa en Proyectos, no para decidir qué puede presupuestarse aquí.
+  // V30.4: Cargabilidad debe servir para planificar, no solo para ver cargas existentes.
+  // Fuente principal: project_assignments + projects activos.
+  // Luego se cruzan las horas existentes en weekly_project_load. Si no existen, se muestra 0h.
+  DB.assignments
+    .filter(a=>a.analyst_id&&a.project_id)
+    .forEach(a=>{
+      const p=DB.projects.find(x=>x.id===a.project_id) || a.projects;
+      if(!p || !isLoadableProject(p))return;
+      const key=`${a.analyst_id}|${a.project_id}`;
+      if(!map.has(key))map.set(key,{analyst_id:a.analyst_id,project_id:a.project_id,hours:{}});
+    });
+
+  // Mantener filas que ya tengan cargas aunque la asignación falte, siempre que el proyecto esté activo.
   DB.loads
-    .filter(l=>l.analyst_id&&l.project_id&&activeIds.has(l.project_id)&&visibleWeekIds.has(l.week_id))
+    .filter(l=>l.analyst_id&&l.project_id&&visibleWeekIds.has(l.week_id)&&isLoadableProject(DB.projects.find(p=>p.id===l.project_id)||l.projects))
     .forEach(l=>{
       const key=`${l.analyst_id}|${l.project_id}`;
       if(!map.has(key))map.set(key,{analyst_id:l.analyst_id,project_id:l.project_id,hours:{}});
       map.get(key).hours[l.week_id]=Math.round(num(l.planned_hours));
     });
 
-  // Oculta ruido heredado: filas existentes con 0h en todas las semanas visibles.
-  // Si el usuario quiere proyectar un caso nuevo, usa Agregar fila.
-  loadRows=[...map.values()].filter(r=>weeks.some(w=>num(r.hours[w.id])>0)).sort(sortLoadRows);
-  if(loadRows.length===0 && activeProjects().length && activeAnalysts().length)addLoadRow(false);
+  loadRows=[...map.values()].sort(sortLoadRows);
 }
 function sortLoadRows(a,b){
   const an=(DB.analysts.find(x=>x.id===a.analyst_id)?.name||'').localeCompare(DB.analysts.find(x=>x.id===b.analyst_id)?.name||'');
@@ -495,17 +504,16 @@ function talentQuadrant(aptitude,attitude){
 function talentProduction(analystId){
   const weekIds=new Set(weeksInTalentPeriod().map(w=>w.id));
   const periodLoads=DB.loads.filter(l=>l.analyst_id===analystId&&weekIds.has(l.week_id)&&isActiveLoad(l));
-  const loadProjectIds=new Set(periodLoads.map(l=>l.project_id).filter(Boolean));
   const assignedProjectIds=new Set(DB.assignments.filter(a=>a.analyst_id===analystId).map(a=>a.project_id));
-  const projectIds=new Set([...loadProjectIds]);
-  if(projectIds.size===0)assignedProjectIds.forEach(id=>projectIds.add(id));
+  const loadProjectIds=new Set(periodLoads.map(l=>l.project_id).filter(Boolean));
+  const projectIds=new Set([...assignedProjectIds,...loadProjectIds]);
   const projects=[...projectIds].map(id=>DB.projects.find(p=>p.id===id)).filter(Boolean);
   const hours=periodLoads.reduce((s,l)=>s+num(l.planned_hours),0);
   const closed=projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()==='finalizado').length;
   const pending=projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()!=='finalizado').length;
   const clients=new Set(projects.map(p=>p.client_id).filter(Boolean)).size;
-  const leader=DB.assignments.filter(a=>a.analyst_id===analystId&&a.role==='Líder'&&projectIds.has(a.project_id)).length;
-  const support=DB.assignments.filter(a=>a.analyst_id===analystId&&a.role!=='Líder'&&projectIds.has(a.project_id)).length;
+  const leader=DB.assignments.filter(a=>a.analyst_id===analystId&&String(a.role||'').toLowerCase().includes('líder')&&projectIds.has(a.project_id)).length;
+  const support=DB.assignments.filter(a=>a.analyst_id===analystId&&!String(a.role||'').toLowerCase().includes('líder')&&projectIds.has(a.project_id)).length;
   const projectRows=projects.map(p=>{
     const assignment=DB.assignments.find(a=>a.project_id===p.id&&a.analyst_id===analystId);
     const projectHours=periodLoads.filter(l=>l.project_id===p.id).reduce((s,l)=>s+num(l.planned_hours),0);
@@ -590,6 +598,7 @@ function renderTalentDetail(){
   talentProjectsTable.innerHTML=prod.projectRows.map(x=>{const c=DB.clients.find(c=>c.id===x.project.client_id);return `<tr><td>${esc(c?.name||x.project.clients?.name||'-')}</td><td><strong>${esc(x.project.name)}</strong></td><td>${esc(x.role)}</td><td><span class="badge ${normalizeProjectStatus(x.project.status).toLowerCase()==='finalizado'?'green':'yellow'}">${esc(normalizeProjectStatus(x.project.status)||'-')}</span></td><td>${Math.round(x.hours)}h</td></tr>`}).join('')||'<tr><td colspan="5">Sin proyectos/cargas en el periodo seleccionado.</td></tr>';
   generateTalentText(false);
   renderCertifications();
+  renderTalentAnnualMetrics();
 }
 function collectTalentReview(){
   const aptitude={},attitude={};
@@ -676,6 +685,67 @@ function generateTalentText(showToast=true){
 }
 
 
+function annualMetricPeriod(){
+  const year=Number(document.getElementById('talentYear')?.value||new Date().getFullYear());
+  return {year,start:new Date(year,0,1),end:new Date(year,11,31,23,59,59,999)};
+}
+function annualWeeklyHours(analystId,year){
+  const weeks=DB.weeks.filter(w=>w.start_date&&new Date(w.start_date+'T00:00:00').getFullYear()===Number(year));
+  const rows=weeks.map(w=>{
+    const rec=(DB.analystWeeklyHours||[]).find(x=>x.analyst_id===analystId&&x.week_id===w.id);
+    return {week:w,expected:num(rec?.expected_hours||44),reported:num(rec?.reported_hours||0),complied:rec?!!rec.complied:false,notes:rec?.notes||''};
+  });
+  const expected=rows.reduce((s,r)=>s+r.expected,0),reported=rows.reduce((s,r)=>s+r.reported,0),ok=rows.filter(r=>r.reported>=r.expected&&r.expected>0).length;
+  return {rows,expected,reported,ok,total:rows.length,score:rows.length?ok/rows.length:0};
+}
+function awarenessMetric(analystId,year){
+  const rows=Array.from({length:12},(_,i)=>{
+    const month=i+1;
+    const rec=(DB.analystAwarenessTraining||[]).find(x=>x.analyst_id===analystId&&Number(x.period_year)===Number(year)&&Number(x.period_month)===month);
+    return {month,completed:!!rec?.completed,course_name:rec?.course_name||'',completed_date:rec?.completed_date||'',notes:rec?.notes||''};
+  });
+  const done=rows.filter(r=>r.completed).length;return {rows,done,total:12,score:done/12};
+}
+function certGoalMetric(analystId,year){
+  const rows=(DB.analystCertificationGoals||[]).filter(x=>x.analyst_id===analystId&&Number(x.period_year)===Number(year));
+  const done=rows.filter(r=>!!r.completed).length;
+  const total=rows.length||1;
+  return {rows,done,total,score:rows.length?done/rows.length:0};
+}
+function qualityMetric(analystId){
+  const prod=talentProduction(analystId);
+  if(!prod.total)return {score:0,value:'Sin datos'};
+  const ratio=prod.total?prod.closed/prod.total:0;
+  return {score:Math.min(1,ratio),value:`${prod.closed}/${prod.total} cerrados`};
+}
+function productivityMetric(analystId){
+  const prod=talentProduction(analystId);
+  if(!prod.total)return {score:0,value:'Sin datos'};
+  const active=prod.projects.filter(p=>normalizeProjectStatus(p.status).toLowerCase()!=='finalizado');
+  const over=active.filter(p=>percent(p)>100).length;
+  const score=Math.max(0,1-(over/Math.max(active.length,1)));
+  return {score,value:`${over} proyectos >100%`};
+}
+function renderTalentAnnualMetrics(){
+  const analystId=document.getElementById('talentAnalyst')?.value;const box=document.getElementById('annualMetricsBox');const detail=document.getElementById('annualMetricsDetail');if(!box||!detail||!analystId)return;
+  const {year}=annualMetricPeriod();
+  const quality=qualityMetric(analystId),prod=productivityMetric(analystId),hours=annualWeeklyHours(analystId,year),cert=certGoalMetric(analystId,year),aware=awarenessMetric(analystId,year);
+  const rows=[
+    {name:'Calidad reportes/proyectos',weight:.25,score:quality.score,value:quality.value,src:'CS + QA interno'},
+    {name:'Productividad',weight:.25,score:prod.score,value:prod.value,src:'Proyectos / Finanzas'},
+    {name:'Registro de horas semanales',weight:.25,score:hours.score,value:`${hours.ok}/${hours.total} semanas`,src:'Registro de horas'},
+    {name:'Plan de certificaciones',weight:.125,score:cert.score,value:`${cert.done}/${cert.rows.length||0} metas`,src:'Trimestrales'},
+    {name:'Concientización KnowBe4',weight:.125,score:aware.score,value:`${aware.done}/12 meses`,src:'KnowBe4'}
+  ];
+  const total=rows.reduce((s,r)=>s+(r.score*r.weight),0);
+  box.innerHTML=`<div class="metric-total"><strong>${Math.round(total*100)}%</strong><span>Resultado anual ${year}</span></div>`+rows.map(r=>`<div class="metric-row"><b>${esc(r.name)}</b><span>${esc(r.value)}</span><i>${Math.round(r.score*r.weight*1000)/10}% / ${r.weight*100}%</i></div>`).join('');
+  const monthNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  detail.innerHTML=`<h4>Horas cargadas por semana</h4><div class="table-scroll"><table><thead><tr><th>Semana</th><th>Esperadas</th><th>Cargadas</th><th>Cumple</th></tr></thead><tbody>${hours.rows.map(r=>`<tr><td>${esc(r.week.week_label)}</td><td>${Math.round(r.expected)}h</td><td>${Math.round(r.reported)}h</td><td><span class="badge ${r.reported>=r.expected?'green':'red'}">${r.reported>=r.expected?'Cumplió':'No cumplió'}</span></td></tr>`).join('')||'<tr><td colspan="4">Sin semanas.</td></tr>'}</tbody></table></div>
+  <h4>Concientización KnowBe4</h4><div class="metric-chips">${aware.rows.map(r=>`<span class="metric-chip ${r.completed?'ok':'bad'}">${monthNames[r.month-1]}: ${r.completed?'OK':'Pendiente'}</span>`).join('')}</div>
+  <h4>Metas de certificación</h4><div class="table-scroll"><table><thead><tr><th>Meta</th><th>Estado</th><th>Notas</th></tr></thead><tbody>${cert.rows.map(r=>`<tr><td>${esc(r.required_certification)}</td><td><span class="badge ${r.completed?'green':'red'}">${r.completed?'Cumplió':'No cumplió'}</span></td><td>${esc(r.notes||'-')}</td></tr>`).join('')||'<tr><td colspan="3">Sin metas de certificación registradas para este año.</td></tr>'}</tbody></table></div>`;
+}
+
+
 function certificationStatus(cert){
   const explicit=(cert.status||'').trim();
   if(cert.expiration_date){
@@ -749,7 +819,7 @@ async function saveCertification(){
   if(res.error){console.error(res.error);return toast('Error guardando certificación: '+res.error.message)}
   const idx=DB.analystCertifications.findIndex(x=>x.id===res.data.id);
   if(idx>=0)DB.analystCertifications[idx]=res.data;else DB.analystCertifications.push(res.data);
-  clearCertificationForm();renderCertifications();generateTalentText(false);toast('Certificación guardada');
+  clearCertificationForm();renderCertifications();renderTalentAnnualMetrics();generateTalentText(false);toast('Certificación guardada');
 }
 async function deleteCertification(id){
   const c=(DB.analystCertifications||[]).find(x=>x.id===id);if(!c)return;
@@ -757,14 +827,14 @@ async function deleteCertification(id){
   const {error}=await db.from('analyst_certifications').delete().eq('id',id);
   if(error)return toast(error.message);
   DB.analystCertifications=DB.analystCertifications.filter(x=>x.id!==id);
-  clearCertificationForm();renderCertifications();generateTalentText(false);toast('Certificación eliminada');
+  clearCertificationForm();renderCertifications();renderTalentAnnualMetrics();generateTalentText(false);toast('Certificación eliminada');
 }
 
 function renderUsers(){usersTable.innerHTML=DB.users.map(u=>{const views=[u.can_dashboard?'Dashboard':'',u.can_clients?'Clientes':'',u.can_analysts?'Analistas':'',u.can_projects?'Proyectos':'',u.can_load?'Carga':'',u.can_weeks?'Semanas':'',u.can_users?'Usuarios':''].filter(Boolean).join(', ');return `<tr><td><strong>${esc(u.full_name)}</strong></td><td>${esc(u.email)}</td><td>${esc(u.roles?.name||'-')}</td><td><span class="badge ${u.status==='Activo'?'green':'red'}">${esc(u.status)}</span></td><td>${esc(views)}</td><td class="actions"><button class="mini-btn" onclick="editAppUser('${u.id}')">Editar</button><button class="mini-btn delete" onclick="disableAppUser('${u.id}')">Inactivar</button></td></tr>`}).join('')}
 async function saveAppUser(){const id=userId.value,email=v('userEmail'),password=v('userPassword');const payload={email,full_name:v('userName'),role_id:v('userRole')||null,status:v('userStatus'),can_dashboard:permDashboard.checked,can_clients:permClients.checked,can_analysts:permAnalysts.checked,can_projects:permProjects.checked,can_load:permLoad.checked,can_weeks:permWeeks.checked,can_users:permUsers.checked};if(!payload.email||!payload.full_name)return toast('Nombre y correo requeridos');if(!id&&!password)return toast('Contraseña inicial requerida');if(!id){const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:payload.full_name}}});if(error)return toast(error.message);payload.auth_user_id=data.user?.id||null;}const r=id?await db.from('app_users').update(payload).eq('id',id):await db.from('app_users').insert([payload]);if(r.error)return toast(r.error.message);clearUserForm();await loadAll();toast('Usuario guardado')}
 function editAppUser(id){const u=DB.users.find(x=>x.id===id);userId.value=u.id;userName.value=u.full_name||'';userEmail.value=u.email||'';userPassword.value='';userRole.value=u.role_id||'';userStatus.value=u.status||'Activo';permDashboard.checked=!!u.can_dashboard;permClients.checked=!!u.can_clients;permAnalysts.checked=!!u.can_analysts;permProjects.checked=!!u.can_projects;permLoad.checked=!!u.can_load;permWeeks.checked=!!u.can_weeks;permUsers.checked=!!u.can_users}async function disableAppUser(id){await db.from('app_users').update({status:'Inactivo'}).eq('id',id);await loadAll()}function clearUserForm(){userId.value='';userName.value='';userEmail.value='';userPassword.value='';userRole.value='';userStatus.value='Activo';permDashboard.checked=true;permClients.checked=false;permAnalysts.checked=false;permProjects.checked=true;permLoad.checked=true;permWeeks.checked=false;permUsers.checked=false}
 
-function buildMultiFilter(id,label,items,valKey,textFn,state,onChange){const box=document.getElementById(id);if(!box)return;const selected=items.filter(x=>state.has(String(x[valKey])));const title=selected.length?`${label}: ${selected.length}`:`${label}: Todos`;box.innerHTML=`<button class="multi-btn" type="button" onclick="toggleMultiFilter(event,'${id}')"><span>${esc(title)}</span><small>▾</small></button><div class="multi-menu" onclick="event.stopPropagation()"><input class="multi-search" placeholder="Buscar ${esc(label.toLowerCase())}..." oninput="filterMultiOptions(this)"><div class="multi-list">${items.map(x=>{const value=String(x[valKey]);return `<label class="multi-option"><input type="checkbox" value="${esc(value)}" ${state.has(value)?'checked':''} onchange="setMultiValue('${id}',this.value,this.checked)"><span>${esc(textFn(x))}</span></label>`}).join('')}</div><div class="multi-actions"><button class="mini-link" onclick="selectAllMulti('${id}',true)">Todos</button><button class="mini-link red" onclick="selectAllMulti('${id}',false)">Limpiar</button></div></div>`;box._items=items;box._valKey=valKey;box._textFn=textFn;box._state=state;box._onChange=onChange;}
+function buildMultiFilter(id,label,items,valKey,textFn,state,onChange){const box=document.getElementById(id);if(!box)return;const selected=items.filter(x=>state.has(String(x[valKey])));const title=selected.length===1?`${label}: ${textFn(selected[0])}`:(selected.length?`${label}: ${selected.length}`:`${label}: Todos`);box.innerHTML=`<button class="multi-btn" type="button" onclick="toggleMultiFilter(event,'${id}')"><span>${esc(title)}</span><small>▾</small></button><div class="multi-menu" onclick="event.stopPropagation()"><input class="multi-search" placeholder="Buscar ${esc(label.toLowerCase())}..." oninput="filterMultiOptions(this)"><div class="multi-list">${items.map(x=>{const value=String(x[valKey]);return `<label class="multi-option"><input type="checkbox" value="${esc(value)}" ${state.has(value)?'checked':''} onchange="setMultiValue('${id}',this.value,this.checked)"><span>${esc(textFn(x))}</span></label>`}).join('')}</div><div class="multi-actions"><button class="mini-link" onclick="selectAllMulti('${id}',true)">Todos</button><button class="mini-link red" onclick="selectAllMulti('${id}',false)">Limpiar</button></div></div>`;box._items=items;box._valKey=valKey;box._textFn=textFn;box._state=state;box._onChange=onChange;}
 function toggleMultiFilter(e,id){e.stopPropagation();document.querySelectorAll('.multi-filter').forEach(x=>{if(x.id!==id)x.classList.remove('open')});document.getElementById(id)?.classList.toggle('open')}
 function closeMultiFilters(){document.querySelectorAll('.multi-filter').forEach(x=>x.classList.remove('open'))}
 function setMultiValue(id,value,checked){const box=document.getElementById(id);if(!box)return;checked?box._state.add(String(value)):box._state.delete(String(value));box._onChange?.();}

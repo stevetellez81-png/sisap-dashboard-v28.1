@@ -911,3 +911,11 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .rating-scale{grid-template-columns:1fr}
   .review-card-head{flex-direction:column}
 }
+
+/* V30.4 - Métricas anuales de talento */
+.annual-metrics-box{display:grid;gap:10px}
+.metric-total{border:1px solid rgba(17,24,39,.08);border-radius:18px;padding:16px;background:linear-gradient(135deg,#fff,#f8fafc);display:flex;justify-content:space-between;align-items:center}
+.metric-total strong{font-size:38px;color:#111827}.metric-total span{color:#64748b;font-weight:800}
+.metric-row{border:1px solid rgba(148,163,184,.25);border-radius:14px;padding:12px;background:#fff;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center}
+.metric-row b{font-size:13px}.metric-row span{font-size:12px;color:#64748b}.metric-row i{font-style:normal;font-weight:900;color:#111827}
+.annual-metrics-detail h4{margin:14px 0 8px}.metric-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.metric-chip{border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}.metric-chip.ok{background:#dcfce7;color:#166534}.metric-chip.bad{background:#fee2e2;color:#991b1b}

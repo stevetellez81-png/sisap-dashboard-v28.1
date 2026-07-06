@@ -129,7 +129,7 @@
     <section id="talent" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V30.2 · Gestión de Consultores</div>
+          <div class="eyebrow">V30.4 · Gestión de Consultores</div>
           <h3>Talento y Desempeño</h3>
           <p class="muted">Evaluación por consultor basada en producción operativa, aptitud, actitud y plan de acción trimestral.</p>
         </div>
@@ -227,6 +227,18 @@
           <div class="form-grid-2"><div><label>Estado</label><select id="certificationStatus"><option>Vigente</option><option>Por vencer</option><option>Vencida</option><option>En proceso</option><option>No aplica</option></select></div><div><label>Número / ID</label><input id="certificationNumber" placeholder="Opcional"></div></div>
           <label>Notas</label><textarea id="certificationNotes" placeholder="CPE, evidencia, comentarios o compromisos"></textarea>
           <div class="row-actions"><button class="btn red" onclick="saveCertification()">Guardar certificación</button><button class="btn dark" onclick="clearCertificationForm()">Limpiar</button></div>
+        </div>
+      </div>
+
+
+      <div class="grid-2 talent-grid">
+        <div class="panel">
+          <div class="panel-title"><div><h3>Métricas anuales</h3><small>Calidad, productividad, horas, certificaciones y KnowBe4</small></div></div>
+          <div id="annualMetricsBox" class="annual-metrics-box"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><div><h3>Detalle de cumplimiento</h3><small>Horas cargadas por semana, concientización y metas de certificación</small></div></div>
+          <div id="annualMetricsDetail" class="annual-metrics-detail"></div>
         </div>
       </div>
 
