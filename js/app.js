@@ -823,53 +823,124 @@ async function deleteCertification(id){
 }
 
 
+
+function getTypeByCode(code){return (DB.timeEntryTypes||[]).find(t=>String(t.code||'').toUpperCase()===String(code||'').toUpperCase())}
+function selectedTimeWeek(){return DB.weeks.find(w=>w.id===document.getElementById('timeWeek')?.value)}
+function selectedTimeAnalyst(){return DB.analysts.find(a=>a.id===document.getElementById('timeAnalyst')?.value)}
+function weeklyExpectedHours(){return 44}
+function timeRowKey(row){return row.kind==='project'?`project:${row.project_id}`:`type:${row.type_code}`}
+function timesheetRows(){
+  const analystId=v('timeAnalyst'), weekId=v('timeWeek');
+  const clientType=getTypeByCode('CLIENT_PROJECT');
+  const rows=[];
+  const assignedProjectIds=new Set((DB.assignments||[]).filter(a=>a.analyst_id===analystId&&a.project_id).map(a=>a.project_id));
+  activeProjects().filter(p=>assignedProjectIds.has(p.id)).sort((a,b)=>{
+    const ca=(DB.clients.find(c=>c.id===a.client_id)?.name||'').localeCompare(DB.clients.find(c=>c.id===b.client_id)?.name||'');
+    return ca||(a.name||'').localeCompare(b.name||'');
+  }).forEach(p=>{
+    const existing=(DB.timeEntries||[]).filter(e=>e.analyst_id===analystId&&e.week_id===weekId&&e.project_id===p.id&&e.time_entry_types?.code==='CLIENT_PROJECT');
+    rows.push({kind:'project',project_id:p.id,type_id:clientType?.id,type_code:'CLIENT_PROJECT',client:DB.clients.find(c=>c.id===p.client_id)?.name||'-',activity:p.name||'-',type:'Proyecto cliente',hours:existing.reduce((s,e)=>s+num(e.hours),0),locked:true});
+  });
+  [
+    ['INTERNAL_PROJECT','Proyecto interno','Proyecto interno'],
+    ['TRAINING','Capacitación','Capacitación'],
+    ['VACATION','Vacaciones','Vacaciones'],
+    ['PERMISSION','Permisos','Permiso'],
+    ['ADMIN','Administrativo','Administrativo']
+  ].forEach(([code,client,activity])=>{
+    const type=getTypeByCode(code);
+    if(!type)return;
+    const existing=(DB.timeEntries||[]).filter(e=>e.analyst_id===analystId&&e.week_id===weekId&&e.entry_type_id===type.id&&!e.project_id);
+    rows.push({kind:'internal',project_id:null,type_id:type.id,type_code:code,client,activity,type:type.name||activity,hours:existing.reduce((s,e)=>s+num(e.hours),0),locked:true});
+  });
+  const q=(v('timeSearch')||'').toLowerCase();
+  return q?rows.filter(r=>[r.client,r.activity,r.type].join(' ').toLowerCase().includes(q)):rows;
+}
 function renderTimeEntries(){
-  const aSel=document.getElementById('timeAnalyst'), wSel=document.getElementById('timeWeek'), tSel=document.getElementById('timeType'), cSel=document.getElementById('timeClient'), pSel=document.getElementById('timeProject');
-  if(!aSel||!wSel||!tSel||!cSel||!pSel)return;
-  fill('timeAnalyst',activeAnalysts(),'Consultor','id',x=>x.name);
-  fill('timeWeek',DB.weeks,'Semana','id',x=>x.week_label);
-  fill('timeType',DB.timeEntryTypes||[],'Tipo de hora','id',x=>x.name);
-  const clientFilter=cSel.value;
-  const clients=[...new Map(activeProjects().map(p=>[p.client_id,DB.clients.find(c=>c.id===p.client_id)]).filter(x=>x[1]).map(([id,c])=>[id,c])).values()];
-  fill('timeClient',clients,'Cliente / interno','id',x=>x.name);
-  if(clientFilter && clients.some(c=>c.id===clientFilter)) cSel.value=clientFilter;
-  const projects=activeProjects().filter(p=>!cSel.value||p.client_id===cSel.value);
-  fill('timeProject',projects,'Proyecto asociado','id',x=>x.name);
+  const aSel=document.getElementById('timeAnalyst'), wSel=document.getElementById('timeWeek');
+  if(!aSel||!wSel)return;
+  const currentA=aSel.value,currentW=wSel.value;
+  fill('timeAnalyst',activeAnalysts(),'Seleccione consultor','id',x=>x.name);
+  if(currentA&&activeAnalysts().some(a=>a.id===currentA)) aSel.value=currentA;
+  fill('timeWeek',DB.weeks,'Seleccione semana','id',x=>x.week_label);
+  if(currentW&&DB.weeks.some(w=>w.id===currentW)) wSel.value=currentW;
   fillTimeFilters();
+  renderTimesheetMatrix();
   renderTimeEntryTable();
   renderTimeSummary();
 }
-function changeTimeClient(){renderTimeEntries()}
-function selectedTimeType(){return (DB.timeEntryTypes||[]).find(t=>t.id===document.getElementById('timeType')?.value)}
-async function saveTimeEntry(){
-  const analyst_id=v('timeAnalyst'),week_id=v('timeWeek'),entry_type_id=v('timeType'),entry_date=v('timeDate'),project_id=v('timeProject'),hours=num(v('timeHours'));
-  if(!analyst_id||!week_id||!entry_type_id||!entry_date||!hours)return toast('Complete consultor, semana, tipo, fecha y horas');
-  const type=selectedTimeType();
-  if(type?.counts_as_project_hours && !project_id)return toast('Para Proyecto cliente debe seleccionar proyecto');
-  const payload={analyst_id,week_id,entry_type_id,entry_date,hours,project_id:project_id||null,description:v('timeDescription')||null};
-  const {error}=await db.from('time_entries').insert([payload]);
-  if(error)return toast('Error registro horas: '+error.message);
-  timeHours.value='';timeDescription.value='';await loadAll();toast('Registro de horas guardado')
+function renderTimesheetMatrix(){
+  const head=document.getElementById('timeMatrixHead'),body=document.getElementById('timeMatrixBody'),foot=document.getElementById('timeMatrixFoot');
+  if(!head||!body||!foot)return;
+  const analystId=v('timeAnalyst'), weekId=v('timeWeek');
+  head.innerHTML='<tr><th>Cliente / Tipo</th><th>Proyecto / Actividad</th><th>Tipo</th><th>Horas</th><th>Estado</th></tr>';
+  if(!analystId||!weekId){body.innerHTML='<tr><td colspan="5">Seleccione consultor y semana para cargar horas.</td></tr>';foot.innerHTML='';return;}
+  const rows=timesheetRows();
+  const total=rows.reduce((s,r)=>s+num(r.hours),0), expected=weeklyExpectedHours();
+  body.innerHTML=rows.map((r,idx)=>`<tr class="timesheet-row ${r.kind==='internal'?'internal-row':''}"><td><strong>${esc(r.client)}</strong></td><td>${esc(r.activity)}</td><td><span class="badge ${r.kind==='project'?'blue':'gray'}">${esc(r.type)}</span></td><td><input class="timesheet-hours" data-key="${esc(timeRowKey(r))}" type="number" min="0" step="0.25" value="${num(r.hours)||''}" oninput="updateTimesheetTotals()"></td><td class="muted">${r.kind==='project'?'Suma a consumo del proyecto':'No suma al proyecto'}</td></tr>`).join('')||'<tr><td colspan="5">Sin proyectos activos asignados. Solo puede cargar actividades internas si existen tipos configurados.</td></tr>';
+  foot.innerHTML=`<tr><th colspan="3">Total semanal</th><th id="timesheetTotalCell">${Math.round(total*100)/100}h</th><th id="timesheetStatusCell">${timesheetStatus(total,expected)}</th></tr>`;
+  updateTimesheetTotals();
 }
-function clearTimeEntry(){['timeHours','timeDescription','timeDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});renderTimeEntries()}
+function updateTimesheetTotals(){
+  const inputs=[...document.querySelectorAll('.timesheet-hours')];
+  const total=inputs.reduce((s,i)=>s+num(i.value),0), expected=weeklyExpectedHours();
+  const totalCell=document.getElementById('timesheetTotalCell'),statusCell=document.getElementById('timesheetStatusCell');
+  if(totalCell)totalCell.textContent=`${Math.round(total*100)/100}h`;
+  if(statusCell)statusCell.innerHTML=timesheetStatus(total,expected);
+  renderTimeSummary(total);
+}
+function timesheetStatus(total,expected){
+  const diff=Math.round((total-expected)*100)/100;
+  if(diff===0)return '<span class="badge green">Cumple 44h</span>';
+  if(diff<0)return `<span class="badge yellow">Faltan ${Math.abs(diff)}h</span>`;
+  return `<span class="badge red">Sobrecarga +${diff}h</span>`;
+}
+async function saveTimesheetMatrix(){
+  const analyst_id=v('timeAnalyst'),week_id=v('timeWeek');
+  if(!analyst_id||!week_id)return toast('Seleccione consultor y semana');
+  const rows=timesheetRows();
+  const inputs=[...document.querySelectorAll('.timesheet-hours')];
+  const byKey=new Map(inputs.map(i=>[i.dataset.key,num(i.value)]));
+  const week=selectedTimeWeek();
+  const entry_date=week?.start_date||new Date().toISOString().slice(0,10);
+  const total=[...byKey.values()].reduce((s,h)=>s+h,0);
+  if(total!==44&&!confirm(`La semana suma ${total}h y debería sumar 44h. ¿Desea guardar de todos modos?`))return;
+  const {error:delErr}=await db.from('time_entries').delete().eq('analyst_id',analyst_id).eq('week_id',week_id);
+  if(delErr)return toast('Error limpiando semana: '+delErr.message);
+  const payload=[];
+  rows.forEach(r=>{
+    const hours=byKey.get(timeRowKey(r))||0;
+    if(hours>0)payload.push({analyst_id,week_id,entry_type_id:r.type_id,entry_date,hours,project_id:r.project_id||null,description:`Carga semanal ${week?.week_label||''} - ${r.activity}`});
+  });
+  if(payload.length){
+    const {error}=await db.from('time_entries').insert(payload);
+    if(error)return toast('Error guardando timesheet: '+error.message);
+  }
+  await syncWeeklyHoursFromTimeEntries(analyst_id,week_id,total);
+  await loadAll();toast('Timesheet semanal guardado');
+}
+async function syncWeeklyHoursFromTimeEntries(analyst_id,week_id,total){
+  const payload={analyst_id,week_id,expected_hours:44,reported_hours:total,comments:'Sincronizado desde Registro de Horas'};
+  const {error}=await db.from('analyst_weekly_hours').upsert([payload],{onConflict:'analyst_id,week_id'});
+  if(error)console.warn('No se pudo sincronizar analyst_weekly_hours',error);
+}
 async function deleteTimeEntry(id){if(!confirm('¿Eliminar este registro de horas?'))return;const {error}=await db.from('time_entries').delete().eq('id',id);if(error)return toast(error.message);await loadAll();toast('Registro eliminado')}
 function renderTimeEntryTable(){
   const tbody=document.getElementById('timeEntriesTable');if(!tbody)return;
-  const analyst=v('timeFilterAnalyst'),week=v('timeFilterWeek'),type=v('timeFilterType'),q=(v('timeSearch')||'').toLowerCase();
+  const analyst=v('timeFilterAnalyst')||v('timeAnalyst'),week=v('timeFilterWeek'),type=v('timeFilterType');
   let rows=DB.timeEntries||[];
   rows=rows.filter(r=>(!analyst||r.analyst_id===analyst)&&(!week||r.week_id===week)&&(!type||r.entry_type_id===type));
-  if(q) rows=rows.filter(r=>[r.entry_code,r.analysts?.name,r.projects?.name,r.projects?.clients?.name,r.time_entry_types?.name,r.description].join(' ').toLowerCase().includes(q));
-  tbody.innerHTML=rows.map(r=>`<tr><td><strong>${esc(r.entry_code||'-')}</strong><small>${fmt(r.entry_date)}</small></td><td>${esc(r.analysts?.name||'-')}</td><td>${esc(r.time_entry_types?.name||'-')}</td><td>${esc(r.projects?.clients?.name||'-')}</td><td>${esc(r.projects?.name||'-')}</td><td>${esc(r.weeks?.week_label||'-')}</td><td><strong>${Math.round(num(r.hours))}h</strong></td><td>${esc(r.description||'')}</td><td><button class="mini-btn delete" onclick="deleteTimeEntry('${r.id}')">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="9">Sin registros de horas para los filtros seleccionados.</td></tr>';
+  tbody.innerHTML=rows.map(r=>`<tr><td><strong>${esc(r.entry_code||'-')}</strong><small>${fmt(r.entry_date)}</small></td><td>${esc(r.analysts?.name||'-')}</td><td>${esc(r.time_entry_types?.name||'-')}</td><td>${esc(r.projects?.clients?.name||r.time_entry_types?.name||'-')}</td><td>${esc(r.projects?.name||r.description||'-')}</td><td>${esc(r.weeks?.week_label||'-')}</td><td><strong>${Math.round(num(r.hours)*100)/100}h</strong></td><td>${esc(r.description||'')}</td><td><button class="mini-btn delete" onclick="deleteTimeEntry('${r.id}')">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="9">Sin registros de horas para los filtros seleccionados.</td></tr>';
 }
-function renderTimeSummary(){
+function renderTimeSummary(liveTotal){
   const box=document.getElementById('timeSummaryBox');if(!box)return;
-  const analyst=v('timeFilterAnalyst')||v('timeAnalyst');
-  const entries=(DB.timeEntries||[]).filter(r=>!analyst||r.analyst_id===analyst);
+  const analyst=v('timeAnalyst')||v('timeFilterAnalyst'), week=v('timeWeek')||v('timeFilterWeek');
+  const entries=(DB.timeEntries||[]).filter(r=>(!analyst||r.analyst_id===analyst)&&(!week||r.week_id===week));
   const projectHours=entries.filter(r=>r.time_entry_types?.counts_as_project_hours).reduce((s,r)=>s+num(r.hours),0);
-  const workedHours=entries.filter(r=>r.time_entry_types?.counts_as_worked_hours!==false).reduce((s,r)=>s+num(r.hours),0);
-  const nonProject=workedHours-projectHours;
-  const projects=new Set(entries.filter(r=>r.project_id).map(r=>r.project_id)).size;
-  box.innerHTML=`<div class="kpi"><span>Horas trabajadas</span><strong>${Math.round(workedHours)}h</strong><small>Total registros</small></div><div class="kpi"><span>Horas a proyectos</span><strong>${Math.round(projectHours)}h</strong><small>Actualiza consumo</small></div><div class="kpi"><span>Horas no proyecto</span><strong>${Math.round(nonProject)}h</strong><small>Interno / permisos</small></div><div class="kpi"><span>Proyectos impactados</span><strong>${projects}</strong><small>Con horas cargadas</small></div>`;
+  const workedHours=liveTotal!==undefined?liveTotal:entries.filter(r=>r.time_entry_types?.counts_as_worked_hours!==false).reduce((s,r)=>s+num(r.hours),0);
+  const nonProject=Math.max(0,workedHours-projectHours);
+  const diff=Math.round((workedHours-44)*100)/100;
+  box.innerHTML=`<div class="kpi"><span>Esperadas semana</span><strong>44h</strong><small>9+9+9+9+8</small></div><div class="kpi"><span>Registradas</span><strong>${Math.round(workedHours*100)/100}h</strong><small>${diff===0?'Cumple':diff<0?'Faltan '+Math.abs(diff)+'h':'Sobrecarga +'+diff+'h'}</small></div><div class="kpi"><span>Horas a proyectos</span><strong>${Math.round(projectHours*100)/100}h</strong><small>Actualiza consumo</small></div><div class="kpi"><span>Horas internas</span><strong>${Math.round(nonProject*100)/100}h</strong><small>Vacaciones / permisos / interno</small></div>`;
 }
 function fillTimeFilters(){
   fill('timeFilterAnalyst',activeAnalysts(),'Todos los consultores','id',x=>x.name);

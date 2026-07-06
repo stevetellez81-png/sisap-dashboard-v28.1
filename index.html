@@ -132,44 +132,47 @@
     <section id="time" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V31.2 · Registro formal de horas</div>
-          <h3>Registro de Horas</h3>
-          <p class="muted">Carga horas reales por consultor. Las horas de Proyecto cliente actualizan automáticamente las horas consumidas del proyecto y alimentan Talento.</p>
+          <div class="eyebrow">V31.3 · Timesheet semanal</div>
+          <h3>Registro de Horas Semanales</h3>
+          <p class="muted">Cada consultor distribuye sus 44 horas semanales entre proyectos activos, actividades internas, capacitación, vacaciones y permisos. Los proyectos finalizados o en pausa no aparecen.</p>
         </div>
       </div>
-      <div id="timeSummaryBox" class="kpis executive-kpis"></div>
-      <div class="grid-2 talent-grid">
-        <div class="panel form-panel">
-          <div class="panel-title"><div><h3>Nuevo registro</h3><small>Código automático: TH-AAAA-000001</small></div><button class="btn dark" onclick="clearTimeEntry()">Limpiar</button></div>
-          <div class="form-grid-2">
-            <div><label>Consultor</label><select id="timeAnalyst" onchange="renderTimeEntries()"></select></div>
-            <div><label>Semana</label><select id="timeWeek"></select></div>
-            <div><label>Tipo de hora</label><select id="timeType" onchange="renderTimeEntries()"></select></div>
-            <div><label>Fecha</label><input id="timeDate" type="date"></div>
-            <div><label>Cliente</label><select id="timeClient" onchange="changeTimeClient()"></select></div>
-            <div><label>Proyecto</label><select id="timeProject"></select></div>
-            <div><label>Horas cargadas</label><input id="timeHours" type="number" min="0" step="0.25" placeholder="Ej. 8"></div>
-          </div>
-          <label>Descripción / actividad realizada</label><textarea id="timeDescription" placeholder="Detalle breve del trabajo, permiso, vacaciones, capacitación o actividad interna"></textarea>
-          <div class="row-actions"><button class="btn red" onclick="saveTimeEntry()">Guardar registro</button></div>
-        </div>
-        <div class="panel">
-          <div class="panel-title"><div><h3>Reglas del registro</h3><small>Qué alimenta cada tipo</small></div></div>
-          <div class="metric-row"><b>Proyecto cliente</b><span>Suma a horas consumidas del proyecto</span><strong>Sí</strong></div>
-          <div class="metric-row"><b>Proyecto interno</b><span>Cuenta como hora trabajada del consultor</span><strong>No al proyecto</strong></div>
-          <div class="metric-row"><b>Vacaciones / Permiso</b><span>Registra disponibilidad y justificación</span><strong>No al proyecto</strong></div>
-          <div class="metric-row"><b>Capacitación / Administrativo</b><span>Alimenta productividad y métricas internas</span><strong>No al proyecto</strong></div>
-        </div>
-      </div>
+
       <div class="panel">
-        <div class="panel-title"><div><h3>Histórico de horas</h3><small>Filtrar por consultor, semana, tipo o texto</small></div><button class="btn dark" onclick="loadAll()">Actualizar</button></div>
-        <div class="filters project-filters">
-          <input id="timeSearch" oninput="renderTimeEntryTable()" placeholder="Buscar código, proyecto, cliente, descripción...">
-          <select id="timeFilterAnalyst" onchange="renderTimeEntryTable();renderTimeSummary()"></select>
-          <select id="timeFilterWeek" onchange="renderTimeEntryTable()"></select>
-          <select id="timeFilterType" onchange="renderTimeEntryTable()"></select>
+        <div class="panel-title">
+          <div>
+            <h3>Timesheet por consultor y semana</h3>
+            <small>Solo se editan las horas. Consultor, cliente, proyecto y actividad vienen del sistema.</small>
+          </div>
+          <button class="btn red" onclick="saveTimesheetMatrix()">Guardar semana</button>
         </div>
-        <div class="table-scroll"><table><thead><tr><th>Código / Fecha</th><th>Consultor</th><th>Tipo</th><th>Cliente</th><th>Proyecto</th><th>Semana</th><th>Horas</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody id="timeEntriesTable"></tbody></table></div>
+        <div class="filters load-filters">
+          <select id="timeAnalyst" onchange="renderTimeEntries()"></select>
+          <select id="timeWeek" onchange="renderTimeEntries()"></select>
+          <input id="timeSearch" oninput="renderTimeEntries()" placeholder="Buscar cliente, proyecto o actividad...">
+        </div>
+        <div id="timeSummaryBox" class="kpis executive-kpis"></div>
+        <div class="table-scroll matrix timesheet-matrix">
+          <table>
+            <thead id="timeMatrixHead"></thead>
+            <tbody id="timeMatrixBody"></tbody>
+            <tfoot id="timeMatrixFoot"></tfoot>
+          </table>
+        </div>
+        <div class="row-actions">
+          <button class="btn red" onclick="saveTimesheetMatrix()">Guardar semana</button>
+          <button class="btn dark" onclick="loadAll()">Actualizar</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><div><h3>Histórico de horas</h3><small>Registros generados por el timesheet semanal</small></div></div>
+        <div class="filters project-filters">
+          <select id="timeFilterAnalyst" onchange="renderTimeEntryTable();renderTimeSummary()"></select>
+          <select id="timeFilterWeek" onchange="renderTimeEntryTable();renderTimeSummary()"></select>
+          <select id="timeFilterType" onchange="renderTimeEntryTable();renderTimeSummary()"></select>
+        </div>
+        <div class="table-scroll"><table><thead><tr><th>Código / Fecha</th><th>Consultor</th><th>Tipo</th><th>Cliente</th><th>Proyecto / Actividad</th><th>Semana</th><th>Horas</th><th>Observación</th><th>Acciones</th></tr></thead><tbody id="timeEntriesTable"></tbody></table></div>
       </div>
     </section>
 

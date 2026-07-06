@@ -920,3 +920,16 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 #weeklyHoursTable input,#awarenessTable input,#awarenessTable select{width:100%;min-width:90px}
 #load td:nth-child(1),#load td:nth-child(2),#load td:nth-child(3){background:#fff;font-weight:600}
 #load td small{display:block;color:#64748b;font-weight:500;margin-top:2px}
+
+/* V31.3 Timesheet semanal */
+.timesheet-matrix table{width:100%;table-layout:fixed}
+.timesheet-matrix th:nth-child(1),.timesheet-matrix td:nth-child(1){width:180px}
+.timesheet-matrix th:nth-child(2),.timesheet-matrix td:nth-child(2){width:auto}
+.timesheet-matrix th:nth-child(3),.timesheet-matrix td:nth-child(3){width:150px}
+.timesheet-matrix th:nth-child(4),.timesheet-matrix td:nth-child(4){width:120px;text-align:center}
+.timesheet-matrix th:nth-child(5),.timesheet-matrix td:nth-child(5){width:180px}
+.timesheet-hours{width:92px;max-width:100%;padding:9px 10px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:#fff;color:#111827;font-weight:800;text-align:center}
+.timesheet-row.internal-row td{background:rgba(248,250,252,.65)}
+.timesheet-matrix tfoot th{position:sticky;bottom:0;background:#0f172a;color:#fff;z-index:3}
+.badge.gray{background:#e5e7eb;color:#374151}
+.badge.yellow{background:#fef3c7;color:#92400e}
