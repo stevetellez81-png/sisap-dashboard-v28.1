@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V30.2</title>
+  <title>SISAP Dashboard V31.0</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.2</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.0</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V30.2</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.0</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -129,7 +129,7 @@
     <section id="talent" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V30.4 · Gestión de Consultores</div>
+          <div class="eyebrow">V31.0 · Gestión de Consultores</div>
           <h3>Talento y Desempeño</h3>
           <p class="muted">Evaluación por consultor basada en producción operativa, aptitud, actitud y plan de acción trimestral.</p>
         </div>
@@ -231,14 +231,34 @@
       </div>
 
 
+
       <div class="grid-2 talent-grid">
         <div class="panel">
-          <div class="panel-title"><div><h3>Métricas anuales</h3><small>Calidad, productividad, horas, certificaciones y KnowBe4</small></div></div>
-          <div id="annualMetricsBox" class="annual-metrics-box"></div>
+          <div class="panel-title"><div><h3>Registro de horas semanales</h3><small>Horas esperadas vs horas cargadas por consultor y semana</small></div><button class="btn red" onclick="saveWeeklyHours()">Guardar horas</button></div>
+          <div class="table-scroll"><table><thead><tr><th>Semana</th><th>Esperadas</th><th>Cargadas</th><th>Cumple</th></tr></thead><tbody id="weeklyHoursTable"></tbody></table></div>
         </div>
         <div class="panel">
-          <div class="panel-title"><div><h3>Detalle de cumplimiento</h3><small>Horas cargadas por semana, concientización y metas de certificación</small></div></div>
-          <div id="annualMetricsDetail" class="annual-metrics-detail"></div>
+          <div class="panel-title"><div><h3>Concientización KnowBe4</h3><small>Registro mensual obligatorio para métrica anual</small></div><button class="btn red" onclick="saveAwareness()">Guardar KnowBe4</button></div>
+          <div class="table-scroll"><table><thead><tr><th>Mes</th><th>Curso</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="awarenessTable"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="grid-2 talent-grid">
+        <div class="panel">
+          <div class="panel-title"><div><h3>Plan anual de certificaciones</h3><small>Compromiso anual vinculado al analista seleccionado</small></div></div>
+          <div class="form-grid-2">
+            <input id="certGoalName" placeholder="Certificación comprometida: CISA, CISM, PCI DSS, ISO 27001...">
+            <select id="certGoalCompleted"><option value="false">Pendiente</option><option value="true">Cumplió</option></select>
+            <input id="certGoalMin" type="number" min="1" value="1" placeholder="Mínimo">
+            <input id="certGoalMax" type="number" min="1" value="2" placeholder="Máximo">
+          </div>
+          <textarea id="certGoalNotes" placeholder="Notas, evidencia o justificación"></textarea>
+          <div class="row-actions"><button class="btn red" onclick="saveCertificationGoal()">Guardar meta</button></div>
+          <div class="table-scroll"><table><thead><tr><th>Meta</th><th>Rango</th><th>Estado</th><th>Notas</th><th>Acciones</th></tr></thead><tbody id="certGoalTable"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><div><h3>Métricas anuales</h3><small>Calidad, productividad, horas, certificaciones y KnowBe4</small></div></div>
+          <div id="annualMetricsBox" class="annual-metrics"></div>
         </div>
       </div>
 
