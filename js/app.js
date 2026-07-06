@@ -1,4 +1,4 @@
-let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[],analystWeeklyHours:[],analystAwarenessTraining:[],analystCertificationGoals:[],analystDevelopmentGoals:[]};
+let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[],analystWeeklyHours:[],analystAwarenessTraining:[],analystCertificationGoals:[],analystDevelopmentGoals:[],timeEntryTypes:[],timeEntries:[]};
 const TALENT_QUESTION_BANK={
   aptitude:[
     {key:"Dominio Técnico",title:"Dominio Técnico",description:"Posee los conocimientos y habilidades necesarios para realizar sus tareas con calidad y sin errores frecuentes.",scale:["Requiere acompañamiento constante","Tiene conocimientos básicos","Cumple adecuadamente con sus funciones","Demuestra dominio sólido en su área","Referente técnico para el equipo"]},
@@ -122,10 +122,10 @@ async function ensureProfile(){
   }
 }
 
-function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
+function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],time:['Registro de Horas','Carga real de horas por proyecto, permiso, vacaciones e interno'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
-  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals]=await Promise.all([
+  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,timeEntryTypes,timeEntries]=await Promise.all([
     db.from('countries').select('*').order('code'),
     db.from('commercials').select('*').order('name'),
     db.from('clients').select('*, commercials(name)').order('name'),
@@ -143,13 +143,15 @@ async function loadAll(){try{
     db.from('analyst_weekly_hours').select('*').order('created_at',{ascending:false}),
     db.from('analyst_awareness_training').select('*').order('period_year',{ascending:false}).order('period_month',{ascending:true}),
     db.from('analyst_certification_goals').select('*').order('period_year',{ascending:false}),
-    db.from('analyst_development_goals').select('*').order('period_year',{ascending:false})
+    db.from('analyst_development_goals').select('*').order('period_year',{ascending:false}),
+    db.from('time_entry_types').select('*').order('name'),
+    db.from('time_entries').select('*, analysts(id,name), projects(id,name,client_id,clients(name)), weeks(id,week_label,start_date), time_entry_types(id,code,name,counts_as_project_hours,counts_as_worked_hours)').order('entry_date',{ascending:false})
   ]);
-  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals].forEach(r=>{if(r.error)throw r.error});
-  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[],analystDevelopmentGoals:analystDevelopmentGoals.data||[]};
+  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,timeEntryTypes,timeEntries].forEach(r=>{if(r.error)throw r.error});
+  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[],analystDevelopmentGoals:analystDevelopmentGoals.data||[],timeEntryTypes:timeEntryTypes.data||[],timeEntries:timeEntries.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
-function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTalent();renderUsers();renderSidebarStatusWidget();}
+function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTimeEntries();renderTalent();renderUsers();renderSidebarStatusWidget();}
 function fillSelects(){
   fill('clientCountry',DB.countries,'País','code',x=>countryLabel(x.code));fill('clientCommercial',activeCommercials(),'Comercial','id',x=>x.name);
   fill('userRole',DB.roles,'Rol','id',x=>x.name);
@@ -818,6 +820,61 @@ async function deleteCertification(id){
   if(error)return toast(error.message);
   DB.analystCertifications=DB.analystCertifications.filter(x=>x.id!==id);
   clearCertificationForm();renderCertifications();generateTalentText(false);toast('Certificación eliminada');
+}
+
+
+function renderTimeEntries(){
+  const aSel=document.getElementById('timeAnalyst'), wSel=document.getElementById('timeWeek'), tSel=document.getElementById('timeType'), cSel=document.getElementById('timeClient'), pSel=document.getElementById('timeProject');
+  if(!aSel||!wSel||!tSel||!cSel||!pSel)return;
+  fill('timeAnalyst',activeAnalysts(),'Consultor','id',x=>x.name);
+  fill('timeWeek',DB.weeks,'Semana','id',x=>x.week_label);
+  fill('timeType',DB.timeEntryTypes||[],'Tipo de hora','id',x=>x.name);
+  const clientFilter=cSel.value;
+  const clients=[...new Map(activeProjects().map(p=>[p.client_id,DB.clients.find(c=>c.id===p.client_id)]).filter(x=>x[1]).map(([id,c])=>[id,c])).values()];
+  fill('timeClient',clients,'Cliente / interno','id',x=>x.name);
+  if(clientFilter && clients.some(c=>c.id===clientFilter)) cSel.value=clientFilter;
+  const projects=activeProjects().filter(p=>!cSel.value||p.client_id===cSel.value);
+  fill('timeProject',projects,'Proyecto asociado','id',x=>x.name);
+  fillTimeFilters();
+  renderTimeEntryTable();
+  renderTimeSummary();
+}
+function changeTimeClient(){renderTimeEntries()}
+function selectedTimeType(){return (DB.timeEntryTypes||[]).find(t=>t.id===document.getElementById('timeType')?.value)}
+async function saveTimeEntry(){
+  const analyst_id=v('timeAnalyst'),week_id=v('timeWeek'),entry_type_id=v('timeType'),entry_date=v('timeDate'),project_id=v('timeProject'),hours=num(v('timeHours'));
+  if(!analyst_id||!week_id||!entry_type_id||!entry_date||!hours)return toast('Complete consultor, semana, tipo, fecha y horas');
+  const type=selectedTimeType();
+  if(type?.counts_as_project_hours && !project_id)return toast('Para Proyecto cliente debe seleccionar proyecto');
+  const payload={analyst_id,week_id,entry_type_id,entry_date,hours,project_id:project_id||null,description:v('timeDescription')||null};
+  const {error}=await db.from('time_entries').insert([payload]);
+  if(error)return toast('Error registro horas: '+error.message);
+  timeHours.value='';timeDescription.value='';await loadAll();toast('Registro de horas guardado')
+}
+function clearTimeEntry(){['timeHours','timeDescription','timeDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});renderTimeEntries()}
+async function deleteTimeEntry(id){if(!confirm('¿Eliminar este registro de horas?'))return;const {error}=await db.from('time_entries').delete().eq('id',id);if(error)return toast(error.message);await loadAll();toast('Registro eliminado')}
+function renderTimeEntryTable(){
+  const tbody=document.getElementById('timeEntriesTable');if(!tbody)return;
+  const analyst=v('timeFilterAnalyst'),week=v('timeFilterWeek'),type=v('timeFilterType'),q=(v('timeSearch')||'').toLowerCase();
+  let rows=DB.timeEntries||[];
+  rows=rows.filter(r=>(!analyst||r.analyst_id===analyst)&&(!week||r.week_id===week)&&(!type||r.entry_type_id===type));
+  if(q) rows=rows.filter(r=>[r.entry_code,r.analysts?.name,r.projects?.name,r.projects?.clients?.name,r.time_entry_types?.name,r.description].join(' ').toLowerCase().includes(q));
+  tbody.innerHTML=rows.map(r=>`<tr><td><strong>${esc(r.entry_code||'-')}</strong><small>${fmt(r.entry_date)}</small></td><td>${esc(r.analysts?.name||'-')}</td><td>${esc(r.time_entry_types?.name||'-')}</td><td>${esc(r.projects?.clients?.name||'-')}</td><td>${esc(r.projects?.name||'-')}</td><td>${esc(r.weeks?.week_label||'-')}</td><td><strong>${Math.round(num(r.hours))}h</strong></td><td>${esc(r.description||'')}</td><td><button class="mini-btn delete" onclick="deleteTimeEntry('${r.id}')">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="9">Sin registros de horas para los filtros seleccionados.</td></tr>';
+}
+function renderTimeSummary(){
+  const box=document.getElementById('timeSummaryBox');if(!box)return;
+  const analyst=v('timeFilterAnalyst')||v('timeAnalyst');
+  const entries=(DB.timeEntries||[]).filter(r=>!analyst||r.analyst_id===analyst);
+  const projectHours=entries.filter(r=>r.time_entry_types?.counts_as_project_hours).reduce((s,r)=>s+num(r.hours),0);
+  const workedHours=entries.filter(r=>r.time_entry_types?.counts_as_worked_hours!==false).reduce((s,r)=>s+num(r.hours),0);
+  const nonProject=workedHours-projectHours;
+  const projects=new Set(entries.filter(r=>r.project_id).map(r=>r.project_id)).size;
+  box.innerHTML=`<div class="kpi"><span>Horas trabajadas</span><strong>${Math.round(workedHours)}h</strong><small>Total registros</small></div><div class="kpi"><span>Horas a proyectos</span><strong>${Math.round(projectHours)}h</strong><small>Actualiza consumo</small></div><div class="kpi"><span>Horas no proyecto</span><strong>${Math.round(nonProject)}h</strong><small>Interno / permisos</small></div><div class="kpi"><span>Proyectos impactados</span><strong>${projects}</strong><small>Con horas cargadas</small></div>`;
+}
+function fillTimeFilters(){
+  fill('timeFilterAnalyst',activeAnalysts(),'Todos los consultores','id',x=>x.name);
+  fill('timeFilterWeek',DB.weeks,'Todas las semanas','id',x=>x.week_label);
+  fill('timeFilterType',DB.timeEntryTypes||[],'Todos los tipos','id',x=>x.name);
 }
 
 function renderUsers(){usersTable.innerHTML=DB.users.map(u=>{const views=[u.can_dashboard?'Dashboard':'',u.can_clients?'Clientes':'',u.can_analysts?'Analistas':'',u.can_projects?'Proyectos':'',u.can_load?'Carga':'',u.can_weeks?'Semanas':'',u.can_users?'Usuarios':''].filter(Boolean).join(', ');return `<tr><td><strong>${esc(u.full_name)}</strong></td><td>${esc(u.email)}</td><td>${esc(u.roles?.name||'-')}</td><td><span class="badge ${u.status==='Activo'?'green':'red'}">${esc(u.status)}</span></td><td>${esc(views)}</td><td class="actions"><button class="mini-btn" onclick="editAppUser('${u.id}')">Editar</button><button class="mini-btn delete" onclick="disableAppUser('${u.id}')">Inactivar</button></td></tr>`}).join('')}

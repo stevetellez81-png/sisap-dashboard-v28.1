@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V31.0</title>
+  <title>SISAP Dashboard V31.2</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.0</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.2</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.0</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.2</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -30,6 +30,7 @@
       <button class="nav" data-view="projects" data-permission="can_projects">▤ Proyectos</button>
       <button class="nav" data-view="load" data-permission="can_load">▥ Cargabilidad</button>
       <button class="nav" data-view="weeks" data-permission="can_weeks">◷ Semanas</button>
+      <button class="nav" data-view="time" data-permission="can_projects">⏱ Registro Horas</button>
       <button class="nav" data-view="talent" data-permission="can_analysts">✦ Talento</button>
       <button class="nav" data-view="users" data-permission="can_users">⚙ Usuarios</button>
     </nav>
@@ -126,10 +127,56 @@
 
 
 
+
+
+    <section id="time" class="view">
+      <div class="panel talent-hero">
+        <div>
+          <div class="eyebrow">V31.2 · Registro formal de horas</div>
+          <h3>Registro de Horas</h3>
+          <p class="muted">Carga horas reales por consultor. Las horas de Proyecto cliente actualizan automáticamente las horas consumidas del proyecto y alimentan Talento.</p>
+        </div>
+      </div>
+      <div id="timeSummaryBox" class="kpis executive-kpis"></div>
+      <div class="grid-2 talent-grid">
+        <div class="panel form-panel">
+          <div class="panel-title"><div><h3>Nuevo registro</h3><small>Código automático: TH-AAAA-000001</small></div><button class="btn dark" onclick="clearTimeEntry()">Limpiar</button></div>
+          <div class="form-grid-2">
+            <div><label>Consultor</label><select id="timeAnalyst" onchange="renderTimeEntries()"></select></div>
+            <div><label>Semana</label><select id="timeWeek"></select></div>
+            <div><label>Tipo de hora</label><select id="timeType" onchange="renderTimeEntries()"></select></div>
+            <div><label>Fecha</label><input id="timeDate" type="date"></div>
+            <div><label>Cliente</label><select id="timeClient" onchange="changeTimeClient()"></select></div>
+            <div><label>Proyecto</label><select id="timeProject"></select></div>
+            <div><label>Horas cargadas</label><input id="timeHours" type="number" min="0" step="0.25" placeholder="Ej. 8"></div>
+          </div>
+          <label>Descripción / actividad realizada</label><textarea id="timeDescription" placeholder="Detalle breve del trabajo, permiso, vacaciones, capacitación o actividad interna"></textarea>
+          <div class="row-actions"><button class="btn red" onclick="saveTimeEntry()">Guardar registro</button></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><div><h3>Reglas del registro</h3><small>Qué alimenta cada tipo</small></div></div>
+          <div class="metric-row"><b>Proyecto cliente</b><span>Suma a horas consumidas del proyecto</span><strong>Sí</strong></div>
+          <div class="metric-row"><b>Proyecto interno</b><span>Cuenta como hora trabajada del consultor</span><strong>No al proyecto</strong></div>
+          <div class="metric-row"><b>Vacaciones / Permiso</b><span>Registra disponibilidad y justificación</span><strong>No al proyecto</strong></div>
+          <div class="metric-row"><b>Capacitación / Administrativo</b><span>Alimenta productividad y métricas internas</span><strong>No al proyecto</strong></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><div><h3>Histórico de horas</h3><small>Filtrar por consultor, semana, tipo o texto</small></div><button class="btn dark" onclick="loadAll()">Actualizar</button></div>
+        <div class="filters project-filters">
+          <input id="timeSearch" oninput="renderTimeEntryTable()" placeholder="Buscar código, proyecto, cliente, descripción...">
+          <select id="timeFilterAnalyst" onchange="renderTimeEntryTable();renderTimeSummary()"></select>
+          <select id="timeFilterWeek" onchange="renderTimeEntryTable()"></select>
+          <select id="timeFilterType" onchange="renderTimeEntryTable()"></select>
+        </div>
+        <div class="table-scroll"><table><thead><tr><th>Código / Fecha</th><th>Consultor</th><th>Tipo</th><th>Cliente</th><th>Proyecto</th><th>Semana</th><th>Horas</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody id="timeEntriesTable"></tbody></table></div>
+      </div>
+    </section>
+
     <section id="talent" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V31.0 · Gestión de Consultores</div>
+          <div class="eyebrow">V31.2 · Gestión de Consultores</div>
           <h3>Talento y Desempeño</h3>
           <p class="muted">Evaluación por consultor basada en producción operativa, aptitud, actitud y plan de acción trimestral.</p>
         </div>
