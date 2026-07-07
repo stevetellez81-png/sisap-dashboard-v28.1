@@ -723,13 +723,37 @@ function monthlyName(m){return ['Enero','Febrero','Marzo','Abril','Mayo','Junio'
 function renderWeeklyHoursModule(){
   const tbody=document.getElementById('weeklyHoursTable');if(!tbody)return;
   const analystId=selectedAnalystId();const p=talentPeriod();const weeks=weeksForTalentPeriod();
-  tbody.innerHTML=weeks.map(w=>{const rec=(DB.analystWeeklyHours||[]).find(x=>x.analyst_id===analystId&&x.week_id===w.id)||{};const expected=num(rec.expected_hours||44),reported=num(rec.reported_hours||0),diff=reported-expected,ok=reported>=expected;return `<tr><td><strong>${esc(w.week_label)}</strong><small>${fmt(w.start_date)} - ${fmt(w.end_date)}</small></td><td><input type="number" min="0" step="1" value="${expected}" data-week-hours="expected" data-week-id="${w.id}"></td><td><input type="number" min="0" step="1" value="${reported}" data-week-hours="reported" data-week-id="${w.id}"></td><td class="num ${diff<0?'danger':'ok'}">${diff>0?'+':''}${Math.round(diff)}h</td><td><span class="badge ${ok?'green':'red'}">${ok?'Cumplió':'No cumplió'}</span></td></tr>`}).join('')||`<tr><td colspan="5">No hay semanas para ${esc(p.label)}.</td></tr>`;
+  tbody.innerHTML=weeks.map(w=>{
+    const rec=(DB.analystWeeklyHours||[]).find(x=>x.analyst_id===analystId&&x.week_id===w.id)||{};
+    const expected=num(rec.expected_hours ?? 44);
+    const reported=num(rec.reported_hours ?? rec.logged_hours ?? rec.loaded_hours ?? 0);
+    const diff=reported-expected,ok=reported>=expected;
+    return `<tr data-week-row="${w.id}"><td><strong>${esc(w.week_label)}</strong><small>${fmt(w.start_date)} - ${fmt(w.end_date)}</small></td><td><input type="number" min="0" step="1" value="${expected}" data-week-hours="expected" data-week-id="${w.id}" oninput="updateWeeklyHoursRow('${w.id}')"></td><td><input type="number" min="0" step="1" value="${reported}" data-week-hours="reported" data-week-id="${w.id}" oninput="updateWeeklyHoursRow('${w.id}')"></td><td class="num ${diff<0?'danger':'ok'}" data-week-diff="${w.id}">${diff>0?'+':''}${Math.round(diff)}h</td><td data-week-status="${w.id}"><span class="badge ${ok?'green':'red'}">${ok?'Cumplió':'No cumplió'}</span></td></tr>`
+  }).join('')||`<tr><td colspan="5">No hay semanas para ${esc(p.label)}.</td></tr>`;
+}
+function updateWeeklyHoursRow(weekId){
+  const expectedEl=document.querySelector(`[data-week-hours="expected"][data-week-id="${CSS.escape(weekId)}"]`);
+  const reportedEl=document.querySelector(`[data-week-hours="reported"][data-week-id="${CSS.escape(weekId)}"]`);
+  const diffEl=document.querySelector(`[data-week-diff="${CSS.escape(weekId)}"]`);
+  const statusEl=document.querySelector(`[data-week-status="${CSS.escape(weekId)}"]`);
+  if(!expectedEl||!reportedEl||!diffEl||!statusEl)return;
+  const expected=num(expectedEl.value||0),reported=num(reportedEl.value||0),diff=reported-expected,ok=reported>=expected;
+  diffEl.className=`num ${diff<0?'danger':'ok'}`;
+  diffEl.textContent=`${diff>0?'+':''}${Math.round(diff)}h`;
+  statusEl.innerHTML=`<span class="badge ${ok?'green':'red'}">${ok?'Cumplió':'No cumplió'}</span>`;
 }
 async function saveWeeklyHours(){
   const analystId=selectedAnalystId();if(!analystId)return toast('Seleccione consultor');
-  const rows=[];document.querySelectorAll('[data-week-hours="expected"]').forEach(el=>{const wid=el.dataset.weekId;const reported=document.querySelector(`[data-week-hours="reported"][data-week-id="${CSS.escape(wid)}"]`)?.value||0;const expected=num(el.value||44);rows.push({analyst_id:analystId,week_id:wid,expected_hours:expected,reported_hours:num(reported),comments:null});});
+  const rows=[];document.querySelectorAll('[data-week-hours="expected"]').forEach(el=>{
+    const wid=el.dataset.weekId;
+    const reported=document.querySelector(`[data-week-hours="reported"][data-week-id="${CSS.escape(wid)}"]`)?.value||0;
+    const expected=num(el.value||44);
+    rows.push({analyst_id:analystId,week_id:wid,expected_hours:expected,reported_hours:num(reported),complied:num(reported)>=expected,notes:'Registro semanal desde Talento'});
+  });
   if(!rows.length)return toast('No hay semanas para guardar');
-  const {error}=await db.from('analyst_weekly_hours').upsert(rows,{onConflict:'analyst_id,week_id'});if(error)return toast('Error horas: '+error.message);await loadAll();toast('Horas semanales guardadas')
+  const {error}=await db.from('analyst_weekly_hours').upsert(rows,{onConflict:'analyst_id,week_id'});
+  if(error)return toast('Error horas: '+error.message);
+  await loadAll();toast('Horas semanales guardadas');
 }
 function renderAwarenessModule(){
   const tbody=document.getElementById('awarenessTable');if(!tbody)return;
@@ -755,7 +779,7 @@ function renderAnnualMetrics(){
   const goals=(DB.analystCertificationGoals||[]).filter(g=>g.analyst_id===analystId&&Number(g.period_year)===year);const certPct=goals.length?Math.min(12.5,(goals.filter(g=>g.completed).length/goals.length)*12.5):0;
   const aw=(DB.analystAwarenessTraining||[]).filter(x=>x.analyst_id===analystId&&Number(x.period_year)===year&&months.includes(Number(x.period_month)));const awarenessPct=months.length?Math.min(12.5,(aw.filter(x=>x.completed).length/months.length)*12.5):0;
   const total=qualityPct+productivityPct+hoursPct+certPct+awarenessPct;const band=total>=90?'Banda 1':total>=75?'Banda 2':'Banda 3';
-  el.innerHTML=`<div class="metric-total"><strong>${Math.round(total)}%</strong><span>${band} · Resultado ${periodLabel}</span></div><div class="metric-row"><b>Calidad reportes/proyectos</b><span>${prod.closed}/${prod.total} cerrados</span><strong>${qualityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Productividad</b><span>${prod.total} proyectos</span><strong>${productivityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Registro de horas mensual</b><span>${monthly.rows.length}/${months.length} meses · ${Math.round(reportedHours)}h/${Math.round(expectedHours)}h</span><strong>${hoursPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Plan de certificaciones</b><span>${goals.filter(g=>g.completed).length}/${goals.length} metas anuales</span><strong>${certPct.toFixed(1)} / 12.5%</strong></div><div class="metric-row"><b>Concientización KnowBe4</b><span>${aw.filter(x=>x.completed).length}/${months.length} meses del periodo</span><strong>${awarenessPct.toFixed(1)} / 12.5%</strong></div>`
+  el.innerHTML=`<div class="metric-total"><strong>${Math.round(total)}%</strong><span>${band} · Resultado ${periodLabel}</span></div><div class="metric-row"><b>Calidad reportes/proyectos</b><span>${prod.closed}/${prod.total} cerrados</span><strong>${qualityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Productividad</b><span>${prod.total} proyectos</span><strong>${productivityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Registro de horas semanal</b><span>${monthly.rows.length} semanas · ${Math.round(reportedHours)}h/${Math.round(expectedHours)}h</span><strong>${hoursPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Plan de certificaciones</b><span>${goals.filter(g=>g.completed).length}/${goals.length} metas anuales</span><strong>${certPct.toFixed(1)} / 12.5%</strong></div><div class="metric-row"><b>Concientización KnowBe4</b><span>${aw.filter(x=>x.completed).length}/${months.length} meses del periodo</span><strong>${awarenessPct.toFixed(1)} / 12.5%</strong></div>`
 }
 
 function certificationStatus(cert){
@@ -885,7 +909,17 @@ async function saveMonthlyHours(){
 }
 function editMonthlyHours(id){const r=(DB.analystMonthlyHours||[]).find(x=>x.id===id);if(!r)return;monthlyAnalyst.value=r.analyst_id;monthlyYear.value=r.year;monthlyMonth.value=r.month;monthlyLoggedHours.value=num(r.logged_hours);monthlyNotes.value=r.notes||'';renderMonthlyHours();}
 async function deleteMonthlyHours(id){if(!confirm('¿Eliminar este registro mensual de horas?'))return;const {error}=await db.from('monthly_time_compliance').delete().eq('id',id);if(error)return toast(error.message);await loadAll();toast('Registro mensual eliminado');}
-function monthlyHoursForPeriod(analystId,year,months){const rows=(DB.analystMonthlyHours||[]).filter(r=>r.analyst_id===analystId&&Number(r.year)===Number(year)&&months.includes(Number(r.month)));const expected=rows.reduce((s,r)=>s+num(r.expected_hours),0),reported=rows.reduce((s,r)=>s+num(r.logged_hours),0);return {rows,expected,reported,pct:expected?reported/expected*100:0,okMonths:rows.filter(r=>num(r.logged_hours)>=num(r.expected_hours)).length};}
+function monthlyHoursForPeriod(analystId,year,months){
+  const weekIds=new Set((DB.weeks||[]).filter(w=>{
+    if(!w.start_date)return false;
+    const d=new Date(w.start_date+'T00:00:00');
+    return d.getFullYear()===Number(year)&&months.includes(d.getMonth()+1);
+  }).map(w=>w.id));
+  const rows=(DB.analystWeeklyHours||[]).filter(r=>r.analyst_id===analystId&&weekIds.has(r.week_id));
+  const expected=rows.reduce((s,r)=>s+num(r.expected_hours),0);
+  const reported=rows.reduce((s,r)=>s+num(r.reported_hours ?? r.logged_hours ?? r.loaded_hours),0);
+  return {rows,expected,reported,pct:expected?reported/expected*100:0,okMonths:rows.filter(r=>num(r.reported_hours ?? r.logged_hours ?? r.loaded_hours)>=num(r.expected_hours)).length};
+}
 
 function getTypeByCode(code){return (DB.timeEntryTypes||[]).find(t=>String(t.code||'').toUpperCase()===String(code||'').toUpperCase())}
 function selectedTimeWeek(){return DB.weeks.find(w=>w.id===document.getElementById('timeWeek')?.value)}
@@ -983,7 +1017,7 @@ async function saveTimesheetMatrix(){
   await loadAll();toast('Timesheet semanal guardado');
 }
 async function syncWeeklyHoursFromTimeEntries(analyst_id,week_id,total){
-  const payload={analyst_id,week_id,expected_hours:44,reported_hours:total,comments:'Sincronizado desde Registro de Horas'};
+  const payload={analyst_id,week_id,expected_hours:44,reported_hours:total,complied:total>=44,notes:'Sincronizado desde Registro de Horas'};
   const {error}=await db.from('analyst_weekly_hours').upsert([payload],{onConflict:'analyst_id,week_id'});
   if(error)console.warn('No se pudo sincronizar analyst_weekly_hours',error);
 }

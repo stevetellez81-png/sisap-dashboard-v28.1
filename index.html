@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SISAP Dashboard V31.2</title>
+  <title>SISAP Dashboard V31.4.3</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <section id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.2</div></div>
+    <div class="sidebar-brand login-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.4.3</div></div>
     <h2>Inicio de sesión</h2><p class="muted">Acceso autorizado al dashboard interno.</p>
     <label>Correo</label><input id="loginEmail" type="email" placeholder="usuario@sisap.com">
     <label>Contraseña</label><input id="loginPassword" type="password" placeholder="Contraseña">
@@ -20,7 +20,7 @@
 
 <div id="appShell" class="app-shell hidden">
   <aside class="sidebar">
-    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.2</div></div>
+    <div class="sidebar-brand"><img src="assets/logo-sisap.png" alt="SISAP" class="sisap-logo"><div class="brand-title">SISAP Dashboard</div><div class="brand-version">V31.4.3</div></div>
     <div class="user-box user-profile"><div class="profile-avatar">JM</div><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">Rol</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard" data-permission="can_dashboard">▦ Dashboard</button>
@@ -30,7 +30,7 @@
       <button class="nav" data-view="projects" data-permission="can_projects">▤ Proyectos</button>
       <button class="nav" data-view="load" data-permission="can_load">▥ Cargabilidad</button>
       <button class="nav" data-view="weeks" data-permission="can_weeks">◷ Semanas</button>
-      <button class="nav" data-view="time" data-permission="can_projects">⏱ Registro Horas</button>
+      
       <button class="nav" data-view="talent" data-permission="can_analysts">✦ Talento</button>
       <button class="nav" data-view="users" data-permission="can_users">⚙ Usuarios</button>
     </nav>
@@ -305,7 +305,7 @@
       <div class="grid-2 talent-grid">
         <div class="panel">
           <div class="panel-title"><div><h3>Registro de horas semanales</h3><small>Horas esperadas vs horas cargadas por consultor y semana</small></div><button class="btn red" onclick="saveWeeklyHours()">Guardar horas</button></div>
-          <div class="table-scroll"><table><thead><tr><th>Semana</th><th>Esperadas</th><th>Cargadas</th><th>Cumple</th></tr></thead><tbody id="weeklyHoursTable"></tbody></table></div>
+          <div class="table-scroll"><table><thead><tr><th>Semana</th><th>Esperadas</th><th>Cargadas</th><th>Diferencia</th><th>Estado</th></tr></thead><tbody id="weeklyHoursTable"></tbody></table></div>
         </div>
         <div class="panel">
           <div class="panel-title"><div><h3>Concientización KnowBe4</h3><small>Registro mensual obligatorio para métrica anual</small></div><button class="btn red" onclick="saveAwareness()">Guardar KnowBe4</button></div>
