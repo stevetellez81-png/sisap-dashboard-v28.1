@@ -132,10 +132,30 @@
     <section id="time" class="view">
       <div class="panel talent-hero">
         <div>
-          <div class="eyebrow">V31.3 · Timesheet semanal</div>
-          <h3>Registro de Horas Semanales</h3>
-          <p class="muted">Cada consultor distribuye sus 44 horas semanales entre proyectos activos, actividades internas, capacitación, vacaciones y permisos. Los proyectos finalizados o en pausa no aparecen.</p>
+          <div class="eyebrow">V31.4 · Métrica mensual + timesheet semanal</div>
+          <h3>Registro de Horas y Cumplimiento Mensual</h3>
+          <p class="muted">Permite registrar horas mensuales para evaluación de desempeño y, si se requiere, seguir usando el timesheet semanal operativo.</p>
         </div>
+      </div>
+
+
+      <div class="panel">
+        <div class="panel-title">
+          <div>
+            <h3>Cumplimiento mensual para evaluación</h3>
+            <small>Registre manualmente las horas ingresadas por consultor. Las horas esperadas se calculan por calendario laboral: lunes a jueves 9h y viernes 8h.</small>
+          </div>
+          <button class="btn red" onclick="saveMonthlyHours()">Guardar mes</button>
+        </div>
+        <div class="filters load-filters">
+          <select id="monthlyAnalyst" onchange="renderMonthlyHours()"></select>
+          <select id="monthlyYear" onchange="renderMonthlyHours()"></select>
+          <select id="monthlyMonth" onchange="renderMonthlyHours()"></select>
+          <input id="monthlyLoggedHours" type="number" min="0" step="0.25" placeholder="Horas registradas">
+          <input id="monthlyNotes" placeholder="Comentario / fuente del reporte">
+        </div>
+        <div id="monthlyHoursSummary" class="kpis executive-kpis"></div>
+        <div class="table-scroll"><table><thead><tr><th>Consultor</th><th>Mes</th><th>Horas esperadas</th><th>Horas registradas</th><th>Diferencia</th><th>% cumplimiento</th><th>Estado</th><th>Comentario</th><th>Acciones</th></tr></thead><tbody id="monthlyHoursTable"></tbody></table></div>
       </div>
 
       <div class="panel">

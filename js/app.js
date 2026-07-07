@@ -1,4 +1,4 @@
-let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[],analystWeeklyHours:[],analystAwarenessTraining:[],analystCertificationGoals:[],analystDevelopmentGoals:[],timeEntryTypes:[],timeEntries:[]};
+let DB={countries:[],commercials:[],clients:[],analysts:[],projects:[],weeks:[],loads:[],users:[],roles:[],assignments:[],performanceReviews:[],performanceAnswers:[],performanceActionPlans:[],analystCertifications:[],analystWeeklyHours:[],analystAwarenessTraining:[],analystCertificationGoals:[],analystDevelopmentGoals:[],analystMonthlyHours:[],timeEntryTypes:[],timeEntries:[]};
 const TALENT_QUESTION_BANK={
   aptitude:[
     {key:"Dominio Técnico",title:"Dominio Técnico",description:"Posee los conocimientos y habilidades necesarios para realizar sus tareas con calidad y sin errores frecuentes.",scale:["Requiere acompañamiento constante","Tiene conocimientos básicos","Cumple adecuadamente con sus funciones","Demuestra dominio sólido en su área","Referente técnico para el equipo"]},
@@ -125,7 +125,7 @@ async function ensureProfile(){
 function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],time:['Registro de Horas','Carga real de horas por proyecto, permiso, vacaciones e interno'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
-  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,timeEntryTypes,timeEntries]=await Promise.all([
+  const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,analystMonthlyHours,timeEntryTypes,timeEntries]=await Promise.all([
     db.from('countries').select('*').order('code'),
     db.from('commercials').select('*').order('name'),
     db.from('clients').select('*, commercials(name)').order('name'),
@@ -144,14 +144,15 @@ async function loadAll(){try{
     db.from('analyst_awareness_training').select('*').order('period_year',{ascending:false}).order('period_month',{ascending:true}),
     db.from('analyst_certification_goals').select('*').order('period_year',{ascending:false}),
     db.from('analyst_development_goals').select('*').order('period_year',{ascending:false}),
+    db.from('monthly_time_compliance').select('*, analysts(id,name)').order('year',{ascending:false}).order('month',{ascending:true}),
     db.from('time_entry_types').select('*').order('name'),
     db.from('time_entries').select('*, analysts(id,name), projects(id,name,client_id,clients(name)), weeks(id,week_label,start_date), time_entry_types(id,code,name,counts_as_project_hours,counts_as_worked_hours)').order('entry_date',{ascending:false})
   ]);
-  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,timeEntryTypes,timeEntries].forEach(r=>{if(r.error)throw r.error});
-  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[],analystDevelopmentGoals:analystDevelopmentGoals.data||[],timeEntryTypes:timeEntryTypes.data||[],timeEntries:timeEntries.data||[]};
+  [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,analystMonthlyHours,timeEntryTypes,timeEntries].forEach(r=>{if(r.error)throw r.error});
+  DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[],analystDevelopmentGoals:analystDevelopmentGoals.data||[],analystMonthlyHours:analystMonthlyHours.data||[],timeEntryTypes:timeEntryTypes.data||[],timeEntries:timeEntries.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
-function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTimeEntries();renderTalent();renderUsers();renderSidebarStatusWidget();}
+function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTimeEntries();renderMonthlyHours();renderTalent();renderUsers();renderSidebarStatusWidget();}
 function fillSelects(){
   fill('clientCountry',DB.countries,'País','code',x=>countryLabel(x.code));fill('clientCommercial',activeCommercials(),'Comercial','id',x=>x.name);
   fill('userRole',DB.roles,'Rol','id',x=>x.name);
@@ -434,7 +435,27 @@ function generateWeeksForMonth(year,month){
   return rows;
 }
 function toISODate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function renderWeeks(){weeksTable.innerHTML=DB.weeks.map(w=>`<tr><td>${esc(w.week_label)}</td><td>${fmt(w.start_date)}</td><td>${fmt(w.end_date)}</td><td><button class="mini-btn delete" onclick="deleteWeek('${w.id}')">Eliminar</button></td></tr>`).join('')}async function deleteWeek(id){const w=DB.weeks.find(x=>x.id===id);if(!w)return;if(!confirm(`¿Eliminar la semana "${w.week_label}"?`))return;if(DB.loads.some(l=>l.week_id===id)){alert('No puede eliminarse porque tiene cargas registradas.');return;}const {error}=await db.from('weeks').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
+function renderWeeks(){weeksTable.innerHTML=DB.weeks.map(w=>`<tr><td>${esc(w.week_label)}</td><td>${fmt(w.start_date)}</td><td>${fmt(w.end_date)}</td><td><button class="mini-btn delete" onclick="deleteWeek('${w.id}')">Eliminar</button></td></tr>`).join('')}
+async function deleteWeek(id){
+  const w=DB.weeks.find(x=>x.id===id);if(!w)return;
+  const hasTimeEntries=(DB.timeEntries||[]).some(e=>e.week_id===id&&num(e.hours)>0);
+  const hasReported=(DB.analystWeeklyHours||[]).some(h=>h.week_id===id&&num(h.reported_hours)>0);
+  const loadHours=(DB.loads||[]).filter(l=>l.week_id===id).reduce((s,l)=>s+num(l.planned_hours)+num(l.real_hours),0);
+  if(hasTimeEntries||hasReported||loadHours>0){
+    alert('No se puede eliminar esta semana porque ya tiene horas registradas o cargas asociadas. Primero corrija esos registros.');
+    return;
+  }
+  if(!confirm(`¿Eliminar definitivamente la semana "${w.week_label}"?`))return;
+  try{
+    const delLoads=await db.from('weekly_project_load').delete().eq('week_id',id);
+    if(delLoads.error)throw delLoads.error;
+    const delWeeklyHours=await db.from('analyst_weekly_hours').delete().eq('week_id',id);
+    if(delWeeklyHours.error)throw delWeeklyHours.error;
+    const delWeek=await db.from('weeks').delete().eq('id',id);
+    if(delWeek.error)throw delWeek.error;
+    await loadAll();toast('Semana eliminada correctamente');
+  }catch(e){console.error('Error eliminando semana:',e);toast('No se pudo eliminar la semana: '+e.message)}
+}
 
 function fillTalentControls(){
   const analyst=document.getElementById('talentAnalyst');
@@ -727,15 +748,14 @@ function renderAnnualMetrics(){
   const el=document.getElementById('annualMetricsBox');if(!el)return;
   const analystId=selectedAnalystId(),year=selectedTalentYear(),months=monthsForTalentPeriod(),periodLabel=talentPeriod().label;
   const prod=talentProduction(analystId);const closedRate=prod.total?prod.closed/prod.total:0;const qualityPct=Math.min(25,closedRate*25);const productivityPct=prod.total>0?25:0;
-  const weeks=weeksForTalentPeriod();const hourRows=(DB.analystWeeklyHours||[]).filter(x=>x.analyst_id===analystId&&weeks.some(w=>w.id===x.week_id));
-  const okHours=hourRows.filter(x=>num(x.reported_hours)>=num(x.expected_hours||44)).length;
-  const expectedHours=weeks.reduce((s,w)=>{const rec=hourRows.find(x=>x.week_id===w.id);return s+num(rec?.expected_hours||44)},0);
-  const reportedHours=hourRows.reduce((s,x)=>s+num(x.reported_hours),0);
-  const hoursPct=weeks.length?Math.min(25,(okHours/weeks.length)*25):0;
+  const monthly=monthlyHoursForPeriod(analystId,year,months);
+  const expectedHours=monthly.expected;
+  const reportedHours=monthly.reported;
+  const hoursPct=expectedHours?Math.min(25,(Math.min(reportedHours/expectedHours,1))*25):0;
   const goals=(DB.analystCertificationGoals||[]).filter(g=>g.analyst_id===analystId&&Number(g.period_year)===year);const certPct=goals.length?Math.min(12.5,(goals.filter(g=>g.completed).length/goals.length)*12.5):0;
   const aw=(DB.analystAwarenessTraining||[]).filter(x=>x.analyst_id===analystId&&Number(x.period_year)===year&&months.includes(Number(x.period_month)));const awarenessPct=months.length?Math.min(12.5,(aw.filter(x=>x.completed).length/months.length)*12.5):0;
   const total=qualityPct+productivityPct+hoursPct+certPct+awarenessPct;const band=total>=90?'Banda 1':total>=75?'Banda 2':'Banda 3';
-  el.innerHTML=`<div class="metric-total"><strong>${Math.round(total)}%</strong><span>${band} · Resultado ${periodLabel}</span></div><div class="metric-row"><b>Calidad reportes/proyectos</b><span>${prod.closed}/${prod.total} cerrados</span><strong>${qualityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Productividad</b><span>${prod.total} proyectos</span><strong>${productivityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Registro de horas semanales</b><span>${okHours}/${weeks.length} semanas · ${Math.round(reportedHours)}h/${Math.round(expectedHours)}h</span><strong>${hoursPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Plan de certificaciones</b><span>${goals.filter(g=>g.completed).length}/${goals.length} metas anuales</span><strong>${certPct.toFixed(1)} / 12.5%</strong></div><div class="metric-row"><b>Concientización KnowBe4</b><span>${aw.filter(x=>x.completed).length}/${months.length} meses del periodo</span><strong>${awarenessPct.toFixed(1)} / 12.5%</strong></div>`
+  el.innerHTML=`<div class="metric-total"><strong>${Math.round(total)}%</strong><span>${band} · Resultado ${periodLabel}</span></div><div class="metric-row"><b>Calidad reportes/proyectos</b><span>${prod.closed}/${prod.total} cerrados</span><strong>${qualityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Productividad</b><span>${prod.total} proyectos</span><strong>${productivityPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Registro de horas mensual</b><span>${monthly.rows.length}/${months.length} meses · ${Math.round(reportedHours)}h/${Math.round(expectedHours)}h</span><strong>${hoursPct.toFixed(1)} / 25%</strong></div><div class="metric-row"><b>Plan de certificaciones</b><span>${goals.filter(g=>g.completed).length}/${goals.length} metas anuales</span><strong>${certPct.toFixed(1)} / 12.5%</strong></div><div class="metric-row"><b>Concientización KnowBe4</b><span>${aw.filter(x=>x.completed).length}/${months.length} meses del periodo</span><strong>${awarenessPct.toFixed(1)} / 12.5%</strong></div>`
 }
 
 function certificationStatus(cert){
@@ -823,6 +843,49 @@ async function deleteCertification(id){
 }
 
 
+
+
+function monthOptions(){return Array.from({length:12},(_,i)=>({id:i+1,name:monthlyName(i+1)}));}
+function yearOptions(){const years=new Set([new Date().getFullYear(),2026,2027]);(DB.weeks||[]).forEach(w=>{if(w.start_date)years.add(new Date(w.start_date+'T00:00:00').getFullYear())});(DB.analystMonthlyHours||[]).forEach(r=>years.add(Number(r.year)));return [...years].filter(Boolean).sort((a,b)=>b-a).map(y=>({id:y,name:String(y)}));}
+function expectedHoursByMonth(year,month){
+  const y=Number(year),m=Number(month);if(!y||!m)return 0;
+  const days=new Date(y,m,0).getDate();let total=0;
+  for(let d=1;d<=days;d++){
+    const wd=new Date(y,m-1,d).getDay();
+    if(wd>=1&&wd<=4)total+=9;
+    if(wd===5)total+=8;
+  }
+  return total;
+}
+function complianceStatus(pct){pct=num(pct);if(pct>=100)return {label:'Cumplido',cls:'green'};if(pct>=90)return {label:'Aceptable',cls:'yellow'};if(pct>=80)return {label:'Parcial',cls:'orange'};return {label:'Incumplido',cls:'red'};}
+function renderMonthlyHours(){
+  const aSel=document.getElementById('monthlyAnalyst'),ySel=document.getElementById('monthlyYear'),mSel=document.getElementById('monthlyMonth');
+  if(!aSel||!ySel||!mSel)return;
+  const ca=aSel.value,cy=ySel.value,cm=mSel.value;
+  fill('monthlyAnalyst',activeAnalysts(),'Seleccione consultor','id',x=>x.name);if(ca&&activeAnalysts().some(a=>a.id===ca))aSel.value=ca;else if(!aSel.value&&activeAnalysts()[0])aSel.value=activeAnalysts()[0].id;
+  fill('monthlyYear',yearOptions(),'Año','id',x=>x.name);if(cy)ySel.value=cy;else ySel.value=String(new Date().getFullYear());
+  fill('monthlyMonth',monthOptions(),'Mes','id',x=>x.name);if(cm)mSel.value=cm;else mSel.value=String(new Date().getMonth()+1);
+  const analystId=aSel.value,year=Number(ySel.value),month=Number(mSel.value);
+  const rec=(DB.analystMonthlyHours||[]).find(r=>r.analyst_id===analystId&&Number(r.year)===year&&Number(r.month)===month);
+  const logged=document.getElementById('monthlyLoggedHours'),notes=document.getElementById('monthlyNotes');
+  if(logged && document.activeElement!==logged)logged.value=rec?num(rec.logged_hours):'';
+  if(notes && document.activeElement!==notes)notes.value=rec?.notes||'';
+  const tbody=document.getElementById('monthlyHoursTable'),box=document.getElementById('monthlyHoursSummary');
+  const rows=(DB.analystMonthlyHours||[]).filter(r=>(!analystId||r.analyst_id===analystId)&&(!year||Number(r.year)===year)).sort((a,b)=>Number(a.month)-Number(b.month));
+  if(tbody){tbody.innerHTML=rows.map(r=>{const expected=num(r.expected_hours),logged=num(r.logged_hours),diff=logged-expected,pct=expected?logged/expected*100:0,st=complianceStatus(pct);return `<tr><td><strong>${esc(r.analysts?.name||DB.analysts.find(a=>a.id===r.analyst_id)?.name||'-')}</strong></td><td>${esc(monthlyName(r.month))} ${r.year}</td><td><strong>${Math.round(expected*100)/100}h</strong></td><td>${Math.round(logged*100)/100}h</td><td class="num ${diff<0?'danger':'ok'}">${diff>0?'+':''}${Math.round(diff*100)/100}h</td><td><strong>${Math.round(pct*100)/100}%</strong></td><td><span class="badge ${st.cls}">${st.label}</span></td><td>${esc(r.notes||'')}</td><td><button class="mini-btn" onclick="editMonthlyHours('${r.id}')">Editar</button><button class="mini-btn delete" onclick="deleteMonthlyHours('${r.id}')">Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="9">Sin registros mensuales para el filtro seleccionado.</td></tr>';}
+  if(box){const expected=rows.reduce((s,r)=>s+num(r.expected_hours),0),logged=rows.reduce((s,r)=>s+num(r.logged_hours),0),pct=expected?logged/expected*100:0,st=complianceStatus(pct);box.innerHTML=`<div class="kpi"><small>Esperadas</small><strong>${Math.round(expected)}h</strong></div><div class="kpi"><small>Registradas</small><strong>${Math.round(logged)}h</strong></div><div class="kpi"><small>Cumplimiento</small><strong>${Math.round(pct*100)/100}%</strong></div><div class="kpi"><small>Estado</small><strong><span class="badge ${st.cls}">${st.label}</span></strong></div>`;}
+}
+async function saveMonthlyHours(){
+  const analyst_id=v('monthlyAnalyst'),year=Number(v('monthlyYear')),month=Number(v('monthlyMonth')),logged_hours=num(v('monthlyLoggedHours')),notes=v('monthlyNotes')||null;
+  if(!analyst_id||!year||!month)return toast('Seleccione consultor, año y mes');
+  const expected_hours=expectedHoursByMonth(year,month),quarter=Math.ceil(month/3);
+  const {error}=await db.from('monthly_time_compliance').upsert([{analyst_id,year,month,quarter,expected_hours,logged_hours,notes,updated_at:new Date().toISOString()}],{onConflict:'analyst_id,year,month'});
+  if(error)return toast('Error guardando horas mensuales: '+error.message);
+  await loadAll();toast('Horas mensuales guardadas');
+}
+function editMonthlyHours(id){const r=(DB.analystMonthlyHours||[]).find(x=>x.id===id);if(!r)return;monthlyAnalyst.value=r.analyst_id;monthlyYear.value=r.year;monthlyMonth.value=r.month;monthlyLoggedHours.value=num(r.logged_hours);monthlyNotes.value=r.notes||'';renderMonthlyHours();}
+async function deleteMonthlyHours(id){if(!confirm('¿Eliminar este registro mensual de horas?'))return;const {error}=await db.from('monthly_time_compliance').delete().eq('id',id);if(error)return toast(error.message);await loadAll();toast('Registro mensual eliminado');}
+function monthlyHoursForPeriod(analystId,year,months){const rows=(DB.analystMonthlyHours||[]).filter(r=>r.analyst_id===analystId&&Number(r.year)===Number(year)&&months.includes(Number(r.month)));const expected=rows.reduce((s,r)=>s+num(r.expected_hours),0),reported=rows.reduce((s,r)=>s+num(r.logged_hours),0);return {rows,expected,reported,pct:expected?reported/expected*100:0,okMonths:rows.filter(r=>num(r.logged_hours)>=num(r.expected_hours)).length};}
 
 function getTypeByCode(code){return (DB.timeEntryTypes||[]).find(t=>String(t.code||'').toUpperCase()===String(code||'').toUpperCase())}
 function selectedTimeWeek(){return DB.weeks.find(w=>w.id===document.getElementById('timeWeek')?.value)}
@@ -1122,20 +1185,24 @@ async function saveProject(){
 }
 async function deleteProject(id){
   const p=DB.projects.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`¿Eliminar proyecto "${p.name}"? Esta acción eliminará también sus cargas semanales y asignaciones.`))return;
+  const hasTimeEntries=(DB.timeEntries||[]).some(e=>e.project_id===id&&num(e.hours)>0);
+  const loadHours=(DB.loads||[]).filter(l=>l.project_id===id).reduce((s,l)=>s+num(l.planned_hours)+num(l.real_hours),0);
+  if(hasTimeEntries||loadHours>0||num(p.consumed_hours)>0){
+    alert('No se puede eliminar este proyecto porque ya tiene horas consumidas, timesheet o cargas registradas. Puede cambiarlo a Finalizado/En pausa, pero no borrarlo como error de captura.');
+    return;
+  }
+  if(!confirm(`¿Eliminar definitivamente el proyecto "${p.name}"? Solo se eliminarán asignaciones y filas vacías relacionadas.`))return;
   try{
-    // V29.2: primero se eliminan las dependencias para evitar errores por llaves foráneas.
     const delLoads=await db.from('weekly_project_load').delete().eq('project_id',id);
     if(delLoads.error)throw delLoads.error;
     const delAssignments=await db.from('project_assignments').delete().eq('project_id',id);
     if(delAssignments.error)throw delAssignments.error;
+    const delTimeEntries=await db.from('time_entries').delete().eq('project_id',id);
+    if(delTimeEntries.error)throw delTimeEntries.error;
     const delProject=await db.from('projects').delete().eq('id',id);
     if(delProject.error)throw delProject.error;
     await loadAll();toast('Proyecto eliminado correctamente');
-  }catch(e){
-    console.error('Error eliminando proyecto:',e);
-    toast('No se pudo eliminar: '+e.message);
-  }
+  }catch(e){console.error('Error eliminando proyecto:',e);toast('No se pudo eliminar el proyecto: '+e.message)}
 }
 function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))})).sort((a,b)=>{const avA=Math.min(...a.values.map(v=>a.capacity-v.hours));const avB=Math.min(...b.values.map(v=>b.capacity-v.hours));return avB-avA||a.name.localeCompare(b.name);})}
 function isActiveLoad(load){return isLoadableProject(load.projects)}
