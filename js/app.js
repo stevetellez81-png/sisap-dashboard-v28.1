@@ -326,14 +326,24 @@ function buildLoadRows(){
   const weeks=displayWeeks('load');
   const visibleWeekIds=new Set(weeks.map(w=>w.id));
   const activeProjectIds=new Set(activeProjects().map(p=>p.id));
+
+  // Cargabilidad tiene una sola fuente de verdad: project_assignments.
+  // Una fila histórica en weekly_project_load NO debe recrear una asignación eliminada.
+  const assignmentKeys=new Set(
+    DB.assignments
+      .filter(a=>a.analyst_id&&a.project_id&&activeProjectIds.has(a.project_id))
+      .map(a=>`${a.analyst_id}|${a.project_id}`)
+  );
+
   const existing=new Map();
   DB.loads
-    .filter(l=>l.analyst_id&&l.project_id&&activeProjectIds.has(l.project_id)&&visibleWeekIds.has(l.week_id))
+    .filter(l=>l.analyst_id&&l.project_id&&activeProjectIds.has(l.project_id)&&visibleWeekIds.has(l.week_id)&&assignmentKeys.has(`${l.analyst_id}|${l.project_id}`))
     .forEach(l=>{
       const key=`${l.analyst_id}|${l.project_id}`;
       if(!existing.has(key))existing.set(key,{analyst_id:l.analyst_id,project_id:l.project_id,hours:{}});
       existing.get(key).hours[l.week_id]=Math.round(num(l.planned_hours));
     });
+
   const rows=new Map();
   DB.assignments.filter(a=>a.analyst_id&&a.project_id&&activeProjectIds.has(a.project_id)).forEach(a=>{
     const analyst=DB.analysts.find(x=>x.id===a.analyst_id);
@@ -341,7 +351,7 @@ function buildLoadRows(){
     const key=`${a.analyst_id}|${a.project_id}`;
     rows.set(key, existing.get(key)||{analyst_id:a.analyst_id,project_id:a.project_id,hours:{}});
   });
-  existing.forEach((v,k)=>{if(!rows.has(k))rows.set(k,v);});
+
   loadRows=[...rows.values()].sort(sortLoadRows);
 }
 function sortLoadRows(a,b){
@@ -392,8 +402,9 @@ function removeLoadRow(i){toast('No se elimina la asignación desde Cargabilidad
 function clearLoadFilters(){loadSearch.value='';loadFilterState.analysts.clear();loadFilterState.clients.clear();loadFilterState.statuses.clear();fillSelects();renderLoadMatrix()}
 async function saveLoadMatrix(){
   const weeks=displayWeeks('load'),activeIds=new Set(activeProjects().map(p=>p.id));
+  const assignmentKeys=new Set(DB.assignments.map(a=>`${a.analyst_id}|${a.project_id}`));
   const payload=[];
-  loadRows.filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)).forEach(r=>weeks.forEach(w=>payload.push({analyst_id:r.analyst_id,project_id:r.project_id,week_id:w.id,planned_hours:Math.round(num(r.hours[w.id]||0)),real_hours:0})));
+  loadRows.filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)&&assignmentKeys.has(`${r.analyst_id}|${r.project_id}`)).forEach(r=>weeks.forEach(w=>payload.push({analyst_id:r.analyst_id,project_id:r.project_id,week_id:w.id,planned_hours:Math.round(num(r.hours[w.id]||0)),real_hours:0})));
   if(payload.length===0)return toast('No hay cargas válidas para guardar');
   const r=await db.from('weekly_project_load').upsert(payload,{onConflict:'project_id,analyst_id,week_id'});
   if(r.error){console.error(r.error);return toast(r.error.message)}
@@ -1187,11 +1198,41 @@ function getProjectAssignments(projectId){
 async function saveProjectAssignments(projectId){
   const rows=getProjectAssignments(projectId);
   if(rows===null)return false;
+
+  const previous=DB.assignments.filter(a=>a.project_id===projectId);
+  const nextAnalystIds=new Set(rows.map(r=>r.analyst_id));
+  const removedAnalystIds=[...new Set(previous.filter(a=>!nextAnalystIds.has(a.analyst_id)).map(a=>a.analyst_id))];
+
   const del=await db.from('project_assignments').delete().eq('project_id',projectId);
   if(del.error){toast(del.error.message);return false}
   if(rows.length){
     const ins=await db.from('project_assignments').insert(rows);
     if(ins.error){toast(ins.error.message);return false}
+  }
+
+  // Si un consultor fue retirado, limpiar proyecciones que ya no corresponden.
+  // Se preserva únicamente histórico pasado con horas reales/planificadas distintas de cero.
+  if(removedAnalystIds.length){
+    const today=new Date();today.setHours(0,0,0,0);
+    const staleLoadIds=DB.loads
+      .filter(l=>l.project_id===projectId&&removedAnalystIds.includes(l.analyst_id))
+      .filter(l=>{
+        const w=DB.weeks.find(x=>x.id===l.week_id);
+        if(!w)return true;
+        const end=new Date(`${w.end_date}T23:59:59`);
+        const hasHistoricalHours=num(l.planned_hours)>0||num(l.real_hours)>0;
+        return end>=today||!hasHistoricalHours;
+      })
+      .map(l=>l.id)
+      .filter(Boolean);
+
+    if(staleLoadIds.length){
+      const cleanup=await db.from('weekly_project_load').delete().in('id',staleLoadIds);
+      if(cleanup.error){
+        console.error('No se pudieron limpiar proyecciones huérfanas:',cleanup.error);
+        toast('Asignación actualizada, pero no se pudieron limpiar todas las proyecciones antiguas');
+      }
+    }
   }
   return true;
 }
@@ -1239,7 +1280,7 @@ async function deleteProject(id){
   }catch(e){console.error('Error eliminando proyecto:',e);toast('No se pudo eliminar el proyecto: '+e.message)}
 }
 function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))})).sort((a,b)=>{const avA=Math.min(...a.values.map(v=>a.capacity-v.hours));const avB=Math.min(...b.values.map(v=>b.capacity-v.hours));return avB-avA||a.name.localeCompare(b.name);})}
-function isActiveLoad(load){return isLoadableProject(load.projects)}
+function isActiveLoad(load){return isLoadableProject(load.projects)&&DB.assignments.some(a=>a.analyst_id===load.analyst_id&&a.project_id===load.project_id)}
 function sumWeek(wid){return DB.loads.filter(l=>l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function sumAnalystWeek(aid,wid){return DB.loads.filter(l=>l.analyst_id===aid&&l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function pillClass(h,c){if(h>=c)return'red';if(h>=c*.9)return'yellow';return'green'}function projectAnalysts(pid){
