@@ -294,7 +294,7 @@ function buildLoadRows(){
     .filter(a=>a.analyst_id&&a.project_id&&activeIds.has(a.project_id))
     .forEach(a=>{
       const key=`${a.analyst_id}|${a.project_id}`;
-      if(!map.has(key))map.set(key,{analyst_id:a.analyst_id,project_id:a.project_id,hours:{},dirtyWeeks:new Set()});
+      if(!map.has(key))map.set(key,{analyst_id:a.analyst_id,project_id:a.project_id,hours:{},dirty:{}});
     });
 
   // Conserva cargas existentes aunque falte una asignación, siempre que el proyecto siga activo.
@@ -302,7 +302,7 @@ function buildLoadRows(){
     .filter(l=>l.analyst_id&&l.project_id&&activeIds.has(l.project_id))
     .forEach(l=>{
       const key=`${l.analyst_id}|${l.project_id}`;
-      if(!map.has(key))map.set(key,{analyst_id:l.analyst_id,project_id:l.project_id,hours:{},dirtyWeeks:new Set()});
+      if(!map.has(key))map.set(key,{analyst_id:l.analyst_id,project_id:l.project_id,hours:{},dirty:{}});
       map.get(key).hours[l.week_id]=Math.round(num(l.planned_hours));
     });
 
@@ -328,8 +328,17 @@ function isLoadableProject(p){
   return st && st!=='finalizado';
 }
 function activeProjects(){return DB.projects.filter(isLoadableProject)}
+function loadDisplayWeeks(){
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth();
+  return displayWeeks().filter(w=>{
+    const start=new Date(w.start_date+'T00:00:00');
+    const end=new Date((w.end_date||w.start_date)+'T23:59:59');
+    return (start.getFullYear()===year&&start.getMonth()===month)||(end.getFullYear()===year&&end.getMonth()===month);
+  });
+}
 function renderLoadMatrix(){
-  const weeks=displayWeeks(),q=v('loadSearch').toLowerCase();
+  const weeks=loadDisplayWeeks(),q=v('loadSearch').toLowerCase();
   const fa=loadFilterState.analysts,fc=loadFilterState.clients,fs=loadFilterState.statuses;
   loadHead.innerHTML=`<tr><th>Consultor</th><th>Cliente</th><th>Proyecto</th>${weeks.map(w=>`<th title="${esc(w.week_label)}">${esc(shortWeek(w.week_label))}</th>`).join('')}<th></th></tr>`;
   const filtered=loadRows.map((r,idx)=>({r,idx})).filter(({r})=>{
@@ -340,34 +349,20 @@ function renderLoadMatrix(){
   });
   loadBody.innerHTML=filtered.map(({r,idx})=>{const p=DB.projects.find(x=>x.id===r.project_id);return `<tr><td>${selectHtml('analyst',idx,DB.analysts,r.analyst_id)}</td><td>${selectHtml('client',idx,DB.clients,p?.client_id||'')}</td><td>${selectHtml('project',idx,activeProjects(),r.project_id)}</td>${weeks.map(w=>`<td><input type="number" min="0" step="1" value="${Math.round(num(r.hours[w.id]||0))}" onchange="setLoadHour(${idx},'${w.id}',this.value)"></td>`).join('')}<td><button class="mini-btn" onclick="removeLoadRow(${idx})">Borrar</button></td></tr>`}).join('')||'<tr><td colspan="20">Sin cargas activas para mostrar.</td></tr>';
 }
-function selectHtml(type,i,items,value){const onchange=type==='analyst'?`changeLoadIdentity(${i},'analyst',this.value)`:type==='project'?`changeLoadIdentity(${i},'project',this.value)`:`changeLoadClient(${i},this.value)`;return `<select onchange="${onchange}">${items.map(x=>`<option value="${x.id}" ${x.id===value?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}
-function markAllLoadWeeksDirty(i){const r=loadRows[i];if(!r)return;r.dirtyWeeks=new Set(displayWeeks().map(w=>w.id))}
-function changeLoadIdentity(i,type,value){if(!loadRows[i])return;if(type==='analyst')loadRows[i].analyst_id=value;else loadRows[i].project_id=value;markAllLoadWeeksDirty(i)}
-function changeLoadClient(i,cid){const p=activeProjects().find(x=>x.client_id===cid);if(p){loadRows[i].project_id=p.id;markAllLoadWeeksDirty(i)}renderLoadMatrix()}
-function setLoadHour(i,wid,val){const r=loadRows[i];if(!r)return;r.hours[wid]=Math.round(num(val));if(!(r.dirtyWeeks instanceof Set))r.dirtyWeeks=new Set();r.dirtyWeeks.add(wid)}
-function addLoadRow(){const r={analyst_id:DB.analysts[0]?.id||'',project_id:activeProjects()[0]?.id||'',hours:{},dirtyWeeks:new Set()};loadRows.push(r);markAllLoadWeeksDirty(loadRows.length-1);renderLoadMatrix()}
-function removeLoadRow(i){loadRows.splice(i,1);renderLoadMatrix()}
-async function saveLoadMatrix(){
-  const activeIds=new Set(activeProjects().map(p=>p.id));
+function selectHtml(type,i,items,value){const onchange=type==='analyst'?`loadRows[${i}].analyst_id=this.value`:type==='project'?`loadRows[${i}].project_id=this.value`:`changeLoadClient(${i},this.value)`;return `<select onchange="${onchange}">${items.map(x=>`<option value="${x.id}" ${x.id===value?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}function changeLoadClient(i,cid){const p=activeProjects().find(x=>x.client_id===cid);if(p)loadRows[i].project_id=p.id;renderLoadMatrix()}function setLoadHour(i,wid,val){loadRows[i].hours[wid]=Math.round(num(val));loadRows[i].dirty=loadRows[i].dirty||{};loadRows[i].dirty[wid]=true}function addLoadRow(){loadRows.push({analyst_id:DB.analysts[0]?.id||'',project_id:activeProjects()[0]?.id||'',hours:{},dirty:{}});renderLoadMatrix()}function removeLoadRow(i){loadRows.splice(i,1);renderLoadMatrix()}async function saveLoadMatrix(){
+  const weeks=loadDisplayWeeks(),activeIds=new Set(activeProjects().map(p=>p.id));
+  const visibleWeekIds=new Set(weeks.map(w=>w.id));
   const payload=[];
-  const seen=new Set();
-  for(const r of loadRows){
-    if(!r.analyst_id||!r.project_id||!activeIds.has(r.project_id))continue;
-    const dirty=r.dirtyWeeks instanceof Set?r.dirtyWeeks:new Set();
-    for(const wid of dirty){
-      const key=`${r.project_id}|${r.analyst_id}|${wid}`;
-      if(seen.has(key)){return toast('Hay filas duplicadas para el mismo consultor, proyecto y semana. Revise antes de guardar')}
-      seen.add(key);
+  loadRows.filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)).forEach(r=>{
+    Object.keys(r.dirty||{}).forEach(wid=>{
+      if(!visibleWeekIds.has(wid))return;
       payload.push({analyst_id:r.analyst_id,project_id:r.project_id,week_id:wid,planned_hours:Math.round(num(r.hours[wid]||0))});
-    }
-  }
-  if(payload.length===0)return toast('No hay cambios de cargabilidad pendientes');
-  const result=await db.from('weekly_project_load').upsert(payload,{onConflict:'project_id,analyst_id,week_id'}).select('project_id,analyst_id,week_id,planned_hours');
-  if(result.error){console.error(result.error);return toast('No se pudo guardar: '+result.error.message)}
-  const saved=result.data||[];
-  if(saved.length!==payload.length){console.warn('Registros esperados:',payload.length,'guardados:',saved.length)}
-  await loadAll();
-  toast(`${saved.length||payload.length} cambios de cargabilidad guardados`)
+    });
+  });
+  if(payload.length===0)return toast('No hay cambios de horas para guardar');
+  const r=await db.from('weekly_project_load').upsert(payload,{onConflict:'project_id,analyst_id,week_id'});
+  if(r.error){console.error(r.error);return toast(r.error.message)}
+  await loadAll();toast(`${payload.length} cambio${payload.length===1?'':'s'} guardado${payload.length===1?'':'s'}`)
 }
 async function saveWeek(){
   const month=Number(v('weekMonth'));
@@ -509,15 +504,9 @@ async function saveProject(){
   const ok=await saveProjectAssignments(projectSavedId);
   if(!ok)return;
   closeProjectModal();
+  if(!id){projectFilterState.analysts.clear();projectFilterState.statuses.clear();projectFilterState.countries.clear();}
   await loadAll();
-  if(!id){
-    const search=document.getElementById('projectSearch');if(search)search.value='';
-    projectFilterState.analysts.clear();projectFilterState.statuses.clear();projectFilterState.countries.clear();
-    const loadSearchEl=document.getElementById('loadSearch');if(loadSearchEl)loadSearchEl.value='';
-    loadFilterState.clients.clear();loadFilterState.statuses.clear();
-    fillSelects();renderProjects();renderLoadMatrix();
-  }
-  toast(id?'Proyecto actualizado':'Proyecto creado y disponible en las listas')
+  toast(id?'Proyecto actualizado':'Proyecto creado')
 }
 async function deleteProject(id){
   const p=DB.projects.find(x=>x.id===id);if(!p)return;
