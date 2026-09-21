@@ -390,7 +390,7 @@ function renderLoadMatrix(){
     const a=DB.analysts.find(x=>x.id===r.analyst_id);
     const p=DB.projects.find(x=>x.id===r.project_id);
     const c=DB.clients.find(x=>x.id===p?.client_id);
-    return `<tr><td><strong>${esc(a?.name||'-')}</strong></td><td>${esc(c?.name||'-')}</td><td><strong>${esc(p?.name||'-')}</strong><small>${esc(normalizeProjectStatus(p?.status)||'')}</small></td>${weeks.map(w=>`<td><input type="number" min="0" step="1" value="${Math.round(num(r.hours[w.id]||0))}" onchange="setLoadHour(${idx},'${w.id}',this.value)"></td>`).join('')}<td></td></tr>`
+    return `<tr><td><strong>${esc(a?.name||'-')}</strong></td><td>${esc(c?.name||'-')}</td><td><strong>${esc(p?.name||'-')}</strong><small>${esc(normalizeProjectStatus(p?.status)||'')}</small></td>${weeks.map(w=>`<td><input type="number" min="0" step="1" value="${Math.round(num(r.hours[w.id]||0))}" oninput="setLoadHour(${idx},'${w.id}',this.value)"></td>`).join('')}<td></td></tr>`
   }).join('')||'<tr><td colspan="20">No hay proyectos asignados para el filtro seleccionado.</td></tr>';
 
 }
@@ -409,16 +409,16 @@ async function saveLoadMatrix(){
   const weeks=displayWeeks('load'),activeIds=new Set(activeProjects().map(p=>p.id));
   const visibleWeekIds=new Set(weeks.map(w=>w.id));
   const assignmentKeys=new Set(DB.assignments.map(a=>`${a.analyst_id}|${a.project_id}`));
-  const payload=[];
+  const changes=[];
 
-  // Guardar únicamente celdas modificadas. Así una edición no pisa horas
-  // de otras semanas/proyectos y tampoco altera real_hours.
+  // Captura exclusivamente las celdas editadas del mes visible.
   loadRows
     .filter(r=>r.analyst_id&&r.project_id&&activeIds.has(r.project_id)&&assignmentKeys.has(`${r.analyst_id}|${r.project_id}`))
     .forEach(r=>{
       Object.keys(r.dirty||{}).forEach(weekId=>{
         if(!r.dirty[weekId]||!visibleWeekIds.has(weekId))return;
-        payload.push({
+        changes.push({
+          row:r,
           analyst_id:r.analyst_id,
           project_id:r.project_id,
           week_id:weekId,
@@ -427,11 +427,60 @@ async function saveLoadMatrix(){
       });
     });
 
-  if(payload.length===0)return toast('No hay cambios de horas para guardar');
-  const result=await db.from('weekly_project_load').upsert(payload,{onConflict:'project_id,analyst_id,week_id'});
-  if(result.error){console.error(result.error);return toast(result.error.message)}
+  if(changes.length===0)return toast('No hay cambios de horas para guardar');
+
+  let saved=0;
+  for(const c of changes){
+    // No dependemos de un UPSERT masivo: primero comprobamos si la celda ya
+    // existe y luego actualizamos o insertamos únicamente ese registro.
+    const current=await db.from('weekly_project_load')
+      .select('id,planned_hours,real_hours')
+      .eq('project_id',c.project_id)
+      .eq('analyst_id',c.analyst_id)
+      .eq('week_id',c.week_id)
+      .maybeSingle();
+    if(current.error){console.error(current.error);return toast('Error al consultar horas: '+current.error.message)}
+
+    let write;
+    if(current.data?.id){
+      write=await db.from('weekly_project_load')
+        .update({planned_hours:c.planned_hours})
+        .eq('id',current.data.id)
+        .select('id,planned_hours')
+        .single();
+    }else{
+      write=await db.from('weekly_project_load')
+        .insert([{
+          analyst_id:c.analyst_id,
+          project_id:c.project_id,
+          week_id:c.week_id,
+          planned_hours:c.planned_hours,
+          real_hours:0
+        }])
+        .select('id,planned_hours')
+        .single();
+    }
+    if(write.error){console.error(write.error);return toast('No se pudo guardar una hora: '+write.error.message)}
+
+    // Verificación real de persistencia antes de refrescar la pantalla.
+    const verify=await db.from('weekly_project_load')
+      .select('planned_hours')
+      .eq('id',write.data.id)
+      .single();
+    if(verify.error||Math.round(num(verify.data?.planned_hours))!==c.planned_hours){
+      console.error(verify.error||'Valor verificado distinto',c,verify.data);
+      return toast('La hora no pudo verificarse en la base de datos');
+    }
+    c.row.dirty[c.week_id]=false;
+    saved++;
+  }
+
+  // Conserva el mes seleccionado y vuelve a leer la fuente de verdad.
+  const selectedMonth=document.getElementById('loadWeekMonth')?.value||'';
   await loadAll();
-  toast(`${payload.length} cambio${payload.length===1?'':'s'} guardado${payload.length===1?'':'s'} correctamente`)
+  const monthControl=document.getElementById('loadWeekMonth');
+  if(monthControl&&selectedMonth){monthControl.value=selectedMonth;buildLoadRows();renderLoadMatrix()}
+  toast(`${saved} cambio${saved===1?'':'s'} guardado${saved===1?'':'s'} y verificado${saved===1?'':'s'}`)
 }
 async function saveWeek(){
   const month=Number(v('weekMonth'));
