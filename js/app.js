@@ -301,30 +301,68 @@ async function disableCommercial(id){const {error}=await db.from('commercials').
 async function deleteCommercial(id){const c=DB.commercials.find(x=>x.id===id);if(!c)return;const hasClients=DB.clients.some(x=>x.commercial_id===id);const hasProjects=DB.projects.some(x=>x.commercial_id===id);if(hasClients||hasProjects){alert('No se puede eliminar porque tiene clientes o proyectos asociados. Se puede inactivar.');return;}if(!confirm(`¿Eliminar comercial ${c.name}?`))return;const {error}=await db.from('commercials').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
 function norm(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-–—]/g,' ').replace(/\s+/g,' ')}
 const expandedAnalystProjects=new Set();
+let analystProjectView='list';
+function setAnalystProjectView(view){
+  analystProjectView=view==='chart'?'chart':'list';
+  renderAnalystProjectCounts(dashboardProjects());
+}
 function toggleAnalystProjects(analystId){
   if(expandedAnalystProjects.has(analystId))expandedAnalystProjects.delete(analystId);else expandedAnalystProjects.add(analystId);
   renderAnalystProjectCounts(dashboardProjects());
 }
-function renderAnalystProjectCounts(projects=DB.projects){
-  const box=document.getElementById('analystProjectCounts');if(!box)return;
-  const allowed=new Set(projects.filter(p=>normalizeProjectStatus(p.status)!=='Finalizado').map(p=>p.id));
-  const rows=DB.analysts.filter(a=>(a.status||'Activo')==='Activo').map(a=>{
+function fillAnalystProjectFilters(projects){
+  const analyst=document.getElementById('analystProjectFilterAnalyst'),client=document.getElementById('analystProjectFilterClient'),status=document.getElementById('analystProjectFilterStatus');
+  if(!analyst||!client||!status)return;
+  const av=analyst.value,cv=client.value,sv=status.value;
+  const activeAnalysts=DB.analysts.filter(a=>(a.status||'Activo')==='Activo');
+  analyst.innerHTML='<option value="">Analista: Todos</option>'+activeAnalysts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  const clientIds=new Set(projects.map(p=>p.client_id).filter(Boolean));
+  client.innerHTML='<option value="">Cliente: Todos</option>'+DB.clients.filter(c=>clientIds.has(c.id)).sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const statuses=[...new Set(projects.map(p=>normalizeProjectStatus(p.status)).filter(x=>x&&x!=='Finalizado'))].sort();
+  status.innerHTML='<option value="">Estado: Todos</option>'+statuses.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  if([...analyst.options].some(o=>o.value===av))analyst.value=av;
+  if([...client.options].some(o=>o.value===cv))client.value=cv;
+  if([...status.options].some(o=>o.value===sv))status.value=sv;
+}
+function analystProjectData(projects=DB.projects){
+  const activeProjects=projects.filter(p=>normalizeProjectStatus(p.status)!=='Finalizado');
+  fillAnalystProjectFilters(activeProjects);
+  const analystId=document.getElementById('analystProjectFilterAnalyst')?.value||'';
+  const clientId=document.getElementById('analystProjectFilterClient')?.value||'';
+  const roleFilter=document.getElementById('analystProjectFilterRole')?.value||'';
+  const statusFilter=document.getElementById('analystProjectFilterStatus')?.value||'';
+  const allowed=new Map(activeProjects.filter(p=>(!clientId||p.client_id===clientId)&&(!statusFilter||normalizeProjectStatus(p.status)===statusFilter)).map(p=>[p.id,p]));
+  return DB.analysts.filter(a=>(a.status||'Activo')==='Activo'&&(!analystId||a.id===analystId)).map(a=>{
     const unique=new Map();
     DB.assignments.filter(x=>x.analyst_id===a.id&&allowed.has(x.project_id)).forEach(x=>{
-      const p=DB.projects.find(pr=>pr.id===x.project_id);if(!p)return;
-      const current=unique.get(p.id);
-      if(!current||x.role==='Líder')unique.set(p.id,{project:p,role:x.role==='Líder'?'Líder':'Apoyo'});
+      const p=allowed.get(x.project_id);if(!p)return;
+      const role=x.role==='Líder'?'Líder':'Apoyo';if(roleFilter&&role!==roleFilter)return;
+      const current=unique.get(p.id);if(!current||role==='Líder')unique.set(p.id,{project:p,role});
     });
     const assignments=[...unique.values()].sort((x,y)=>String(x.project.clients?.name||'').localeCompare(String(y.project.clients?.name||''))||String(x.project.name||'').localeCompare(String(y.project.name||'')));
-    const leader=assignments.filter(x=>x.role==='Líder').length;
-    const support=assignments.filter(x=>x.role!=='Líder').length;
-    return {id:a.id,name:a.name,leader,support,total:assignments.length,assignments};
-  }).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
+    return {id:a.id,name:a.name,leader:assignments.filter(x=>x.role==='Líder').length,support:assignments.filter(x=>x.role==='Apoyo').length,total:assignments.length,assignments};
+  }).filter(r=>r.total>0||analystId).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
+}
+function renderAnalystProjectCounts(projects=DB.projects){
+  const box=document.getElementById('analystProjectCounts');if(!box)return;
+  const rows=analystProjectData(projects);
+  document.getElementById('analystListViewBtn')?.classList.toggle('active',analystProjectView==='list');
+  document.getElementById('analystChartViewBtn')?.classList.toggle('active',analystProjectView==='chart');
+  if(analystProjectView==='chart')return renderAnalystProjectCharts(rows,box);
+  box.classList.remove('analyst-chart-mode');
   box.innerHTML=rows.map(r=>{
     const open=expandedAnalystProjects.has(r.id);
     const detail=r.assignments.length?r.assignments.map(x=>`<div class="analyst-project-item"><span>${esc(x.project.clients?.name||DB.clients.find(c=>c.id===x.project.client_id)?.name||'-')}</span><strong>${esc(x.project.name||'-')}</strong><span class="badge ${x.role==='Líder'?'green':'amber'}">${esc(x.role)}</span><span class="badge">${esc(normalizeProjectStatus(x.project.status)||'Sin estado')}</span></div>`).join(''):'<div class="analyst-project-empty">Sin proyectos asignados.</div>';
     return `<div class="analyst-count-card ${open?'open':''}"><button type="button" class="analyst-count-row" onclick="toggleAnalystProjects('${r.id}')" aria-expanded="${open}"><strong>${esc(r.name)}</strong><span>${r.total} proyectos <b class="analyst-chevron">${open?'▴':'▾'}</b></span><small>Líder: ${r.leader} · Apoyo: ${r.support}</small></button><div class="analyst-project-list" ${open?'':'hidden'}><div class="analyst-project-head"><span>Cliente</span><span>Proyecto</span><span>Rol</span><span>Estado</span></div>${detail}</div></div>`;
-  }).join('')||'<small>Sin asignaciones.</small>';
+  }).join('')||'<small>Sin asignaciones para los filtros seleccionados.</small>';
+}
+function renderAnalystProjectCharts(rows,box){
+  box.classList.add('analyst-chart-mode');
+  const max=Math.max(1,...rows.map(r=>r.total));
+  const distribution=rows.map(r=>`<div class="analyst-bar-row"><div class="analyst-bar-label"><strong>${esc(r.name)}</strong><small>${r.total} proyectos</small></div><div class="analyst-bar-track"><span class="analyst-bar leader" style="width:${(r.leader/max)*100}%" title="${r.leader} como Líder"></span><span class="analyst-bar support" style="width:${(r.support/max)*100}%" title="${r.support} como Apoyo"></span></div><div class="analyst-bar-values"><b>${r.leader}</b><span>L</span><b>${r.support}</b><span>A</span></div></div>`).join('')||'<small>Sin datos.</small>';
+  const projects=rows.flatMap(r=>r.assignments.map(a=>({analyst:r.name,...a}))).sort((a,b)=>Math.abs(percent(b.project)-num(b.project.progress_percent))-Math.abs(percent(a.project)-num(a.project.progress_percent))).slice(0,12);
+  const efficiency=projects.map(x=>{const hours=Math.round(percent(x.project)),progress=Math.round(num(x.project.progress_percent)),gap=progress-hours;return `<div class="progress-compare-row"><div class="progress-project"><strong>${esc(x.project.name)}</strong><small>${esc(x.analyst)} · ${esc(x.project.clients?.name||DB.clients.find(c=>c.id===x.project.client_id)?.name||'-')}</small></div><div class="progress-metrics"><div><span>Horas</span><div class="compare-track"><i class="hours" style="width:${Math.min(hours,100)}%"></i></div><b>${hours}%</b></div><div><span>Avance</span><div class="compare-track"><i class="progress" style="width:${Math.min(progress,100)}%"></i></div><b>${progress}%</b></div></div><span class="gap-pill ${gap<0?'negative':'positive'}">${gap>0?'+':''}${gap} pp</span></div>`}).join('')||'<small>Sin proyectos para comparar.</small>';
+  box.innerHTML=`<div class="analyst-chart-card"><div class="analyst-chart-heading"><div><h4>Distribución de proyectos activos</h4><small>Proyectos únicos por analista, separados por rol</small></div><div class="chart-legend"><span><i class="legend-leader"></i>Líder</span><span><i class="legend-support"></i>Apoyo</span></div></div>${distribution}</div><div class="analyst-chart-card"><div class="analyst-chart-heading"><div><h4>Avance vs. consumo de horas</h4><small>Mayor desviación entre progreso reportado y presupuesto consumido</small></div></div>${efficiency}</div>`;
 }
 function renderAnalysts(){analystsTable.innerHTML=DB.analysts.map(a=>{const p=new Set(DB.loads.filter(l=>l.analyst_id===a.id).map(l=>l.project_id)).size;return `<tr><td><strong>${esc(a.name)}</strong></td><td>${esc(a.email||'-')}</td><td>${esc(a.role||'-')}</td><td>${Math.round(num(a.weekly_capacity||44))}</td><td>${p}</td><td><span class="badge ${a.status==='Activo'?'green':'red'}">${esc(a.status||'-')}</span></td><td class="actions"><button class="mini-btn" onclick="editAnalyst('${a.id}')">Editar</button><button class="mini-btn delete" onclick="disableAnalyst('${a.id}')">Inactivar</button><button class="mini-btn danger" onclick="deleteAnalyst('${a.id}')">Eliminar</button></td></tr>`}).join('')}
 async function saveAnalyst(){const id=analystId.value;const payload={name:v('analystName'),email:v('analystEmail'),role:v('analystRole'),weekly_capacity:Math.round(num(v('analystCapacity')||44)),status:v('analystStatus')};if(!payload.name)return toast('Nombre requerido');const r=id?await db.from('analysts').update(payload).eq('id',id):await db.from('analysts').insert([payload]);if(r.error)return toast(r.error.message);clearAnalyst();await loadAll()}
