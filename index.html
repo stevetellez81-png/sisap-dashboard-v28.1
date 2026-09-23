@@ -78,7 +78,7 @@
         </div>
         <div class="table-scroll projects-table">
           <table>
-            <thead><tr><th><input type="checkbox"></th><th>País</th><th>Cliente</th><th>Proyecto</th><th>Horas</th><th>Consumidas</th><th>%</th><th>Analista</th><th>Estado</th><th>Observación</th><th>Acciones</th></tr></thead>
+            <thead><tr><th><input type="checkbox"></th><th>País</th><th>Cliente</th><th>Proyecto</th><th>Horas</th><th>Consumidas</th><th>% Horas</th><th>% Avance</th><th>Analista</th><th>Estado</th><th>Observación</th><th>Acciones</th></tr></thead>
             <tbody id="projectsTable"></tbody>
           </table>
         </div>
@@ -101,6 +101,7 @@
           <label>Servicio<input id="projectServiceType" placeholder="PCI, ISO 27001, NIST, X-Analytics..."></label>
           <label>Horas contratadas<input id="projectContractedHours" type="number" min="0" step="1"></label>
           <label>Horas consumidas<input id="projectConsumedHours" type="number" min="0" step="1"></label>
+          <label>% Avance del proyecto<input id="projectProgressPercent" type="number" min="0" max="100" step="1" value="0"></label>
           <label>Prioridad<select id="projectPriority"><option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option></select></label>
           <label>No. fuente<input id="projectSourceNo" type="number" min="0" step="1"></label>
           <label class="full-span">Observación<textarea id="projectObservation"></textarea></label>

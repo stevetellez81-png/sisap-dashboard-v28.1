@@ -936,3 +936,12 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 /* V29.4: detalle auditable de proyectos por analista */
 .analyst-count-card{border:1px solid var(--line);border-radius:14px;background:#fafafa;overflow:hidden}.analyst-count-card .analyst-count-row{width:100%;border:0;border-radius:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}.analyst-count-card .analyst-count-row:hover{background:#f3f4f6}.analyst-chevron{margin-left:6px}.analyst-project-list{border-top:1px solid var(--line);background:#fff;padding:8px 12px 12px}.analyst-project-list[hidden]{display:none}.analyst-project-head,.analyst-project-item{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(260px,2fr) 90px 130px;gap:12px;align-items:center;padding:8px 10px}.analyst-project-head{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}.analyst-project-item{border-top:1px solid var(--line);font-size:13px}.analyst-project-item strong{font-size:13px}.analyst-project-empty{padding:12px;color:var(--muted)}@media(max-width:900px){.analyst-project-list{overflow-x:auto}.analyst-project-head,.analyst-project-item{min-width:720px}}
+
+/* V29.5 - avance real del proyecto */
+.progress-pill{background:#e8efff;color:#1d4ed8;}
+.projects-table table{min-width:1500px !important;}
+.projects-table th:nth-child(8),.projects-table td:nth-child(8){width:82px !important;text-align:center !important;}
+.projects-table th:nth-child(9),.projects-table td:nth-child(9){width:180px !important;text-align:left !important;}
+.projects-table th:nth-child(10),.projects-table td:nth-child(10){width:130px !important;}
+.projects-table th:nth-child(11),.projects-table td:nth-child(11){width:320px !important;}
+.projects-table th:nth-child(12),.projects-table td:nth-child(12){width:170px !important;}

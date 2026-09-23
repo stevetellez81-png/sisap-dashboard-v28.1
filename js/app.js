@@ -307,7 +307,7 @@ function toggleAnalystProjects(analystId){
 }
 function renderAnalystProjectCounts(projects=DB.projects){
   const box=document.getElementById('analystProjectCounts');if(!box)return;
-  const allowed=new Set(projects.map(p=>p.id));
+  const allowed=new Set(projects.filter(p=>normalizeProjectStatus(p.status)!=='Finalizado').map(p=>p.id));
   const rows=DB.analysts.filter(a=>(a.status||'Activo')==='Activo').map(a=>{
     const unique=new Map();
     DB.assignments.filter(x=>x.analyst_id===a.id&&allowed.has(x.project_id)).forEach(x=>{
@@ -334,7 +334,7 @@ function renderProjects(){
   const fa=projectFilterState.analysts,fs=projectFilterState.statuses,fc=projectFilterState.countries;
   let rows=DB.projects.filter(p=>{const txt=[p.clients?.name,p.name,p.commercials?.name,p.commercial,p.observation].join(' ').toLowerCase();const anIds=DB.assignments.filter(l=>l.project_id===p.id).map(l=>l.analyst_id);const code=normalizeCountry(p.country_code);return(!q||txt.includes(q))&&(fa.size===0||anIds.some(id=>fa.has(id)))&&(fs.size===0||fs.has(p.status))&&(fc.size===0||fc.has(code))});
   visibleProjects.textContent=rows.length;
-  projectsTable.innerHTML=rows.map(p=>{const pct=Math.round(percent(p));const code=normalizeCountry(p.country_code);const rowClass=pct>100?'overloaded':pct>=90?'risk':'';const pctClass=pct>100?'pct-over':pct>=90?'pct-risk':'pct-ok';const st=(p.status||'').toLowerCase().includes('ejec')?'blue':(p.status||'').toLowerCase().includes('final')?'green':'';return `<tr class="${rowClass}"><td><input type="checkbox"></td><td class="country-cell">${flagFor(code)} ${esc(code||'-')}</td><td class="client-name">${esc(p.clients?.name||'-')}</td><td class="project-name">${esc(p.name)}</td><td>${Math.round(num(p.contracted_hours||p.estimated_hours))}</td><td>${Math.round(num(p.consumed_hours))}</td><td><span class="pct-pill ${pctClass}">${pct}%</span></td><td>${esc(projectAnalysts(p.id)||'-')}</td><td class="project-status-cell"><span class="badge ${st}">${esc(p.status||'-')}</span></td><td class="project-observation-cell">${esc(p.observation||'-')}</td><td class="project-actions-cell"><button class="mini-btn" onclick="openProjectModal('${p.id}')">Editar</button><button class="mini-btn delete" onclick="deleteProject('${p.id}')">Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="11">Sin proyectos para mostrar.</td></tr>';
+  projectsTable.innerHTML=rows.map(p=>{const pct=Math.round(percent(p));const code=normalizeCountry(p.country_code);const rowClass=pct>100?'overloaded':pct>=90?'risk':'';const pctClass=pct>100?'pct-over':pct>=90?'pct-risk':'pct-ok';const st=(p.status||'').toLowerCase().includes('ejec')?'blue':(p.status||'').toLowerCase().includes('final')?'green':'';return `<tr class="${rowClass}"><td><input type="checkbox"></td><td class="country-cell">${flagFor(code)} ${esc(code||'-')}</td><td class="client-name">${esc(p.clients?.name||'-')}</td><td class="project-name">${esc(p.name)}</td><td>${Math.round(num(p.contracted_hours||p.estimated_hours))}</td><td>${Math.round(num(p.consumed_hours))}</td><td><span class="pct-pill ${pctClass}">${pct}%</span></td><td><span class="pct-pill progress-pill">${Math.round(num(p.progress_percent))}%</span></td><td>${esc(projectAnalysts(p.id)||'-')}</td><td class="project-status-cell"><span class="badge ${st}">${esc(p.status||'-')}</span></td><td class="project-observation-cell">${esc(p.observation||'-')}</td><td class="project-actions-cell"><button class="mini-btn" onclick="openProjectModal('${p.id}')">Editar</button><button class="mini-btn delete" onclick="deleteProject('${p.id}')">Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="12">Sin proyectos para mostrar.</td></tr>';
 }
 function buildLoadRows(){
   const weeks=displayWeeks('load');
@@ -1233,6 +1233,7 @@ function openProjectModal(id=''){
   projectServiceType.value=p?.service_type||'';
   projectContractedHours.value=Math.round(num(p?.contracted_hours||p?.estimated_hours||0));
   projectConsumedHours.value=Math.round(num(p?.consumed_hours||0));
+  projectProgressPercent.value=Math.round(num(p?.progress_percent||0));
   projectPriority.value=p?.priority||'Baja';
   projectSourceNo.value=p?.source_no||'';
   projectObservation.value=p?.observation||'';
@@ -1327,8 +1328,9 @@ function closeProjectModal(){const m=document.getElementById('projectModal');if(
 async function saveProject(){
   const id=projectId.value;
   const client=DB.clients.find(c=>c.id===projectClient.value);
-  const payload={client_id:projectClient.value||null,name:v('projectName'),service_type:v('projectServiceType'),status:normalizeProjectStatus(v('projectStatus')),country_code:v('projectCountry')||normalizeCountry(client?.country_code||client?.country),commercial_id:v('projectCommercial')||null,contracted_hours:num(v('projectContractedHours')),estimated_hours:num(v('projectContractedHours')),consumed_hours:num(v('projectConsumedHours')),priority:v('projectPriority')||'Baja',source_no:v('projectSourceNo')?num(v('projectSourceNo')):null,observation:v('projectObservation')||null};
+  const payload={client_id:projectClient.value||null,name:v('projectName'),service_type:v('projectServiceType'),status:normalizeProjectStatus(v('projectStatus')),country_code:v('projectCountry')||normalizeCountry(client?.country_code||client?.country),commercial_id:v('projectCommercial')||null,contracted_hours:num(v('projectContractedHours')),estimated_hours:num(v('projectContractedHours')),consumed_hours:num(v('projectConsumedHours')),progress_percent:Math.max(0,Math.min(100,num(v('projectProgressPercent')))),priority:v('projectPriority')||'Baja',source_no:v('projectSourceNo')?num(v('projectSourceNo')):null,observation:v('projectObservation')||null};
   if(!payload.client_id||!payload.name)return toast('Cliente y proyecto son requeridos');
+  if(payload.status==='Finalizado'&&payload.progress_percent<100&&!confirm(`El proyecto se marcará como Finalizado con ${Math.round(payload.progress_percent)}% de avance. ¿Desea continuar?`))return;
   const exists=DB.projects.some(p=>p.id!==id&&p.client_id===payload.client_id&&norm(p.name)===norm(payload.name));
   if(exists)return toast('Este proyecto ya existe para este cliente');
   let projectSavedId=id;
