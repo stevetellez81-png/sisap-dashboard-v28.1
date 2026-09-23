@@ -197,7 +197,7 @@ function renderDashboard(){
   if(typeof kpiRisk!=='undefined')animateNumber(kpiRisk,risk);
   animateNumber(kpiOver,overloaded);
   if(typeof kpiPendingHours!=='undefined')animateNumber(kpiPendingHours,Math.round(pending),'h');
-  updateGlobalCompliance(activeProjectList,risk,overloaded);renderWeekSummary(weeks,capTotal);renderConsultantLoad(weeks);renderCapacityAlerts(dashboardAlertWeeks());renderCountryCards(projects);renderProjectAlerts(activeProjectList);renderAnalystProjectCounts(activeProjectList);renderSidebarStatusWidget();
+  updateGlobalCompliance(activeProjectList,risk,overloaded);renderWeekSummary(weeks,capTotal);renderConsultantLoad(weeks);renderCapacityAlerts(dashboardAlertWeeks());renderCountryCards(projects);renderProjectAlerts(activeProjectList);renderAnalystProjectCounts(projects);renderSidebarStatusWidget();
 }
 
 function updateQuarterRangeLabel(){
@@ -300,17 +300,31 @@ function clearCommercial(){commercialId.value='';commercialName.value='';commerc
 async function disableCommercial(id){const {error}=await db.from('commercials').update({status:'Inactivo'}).eq('id',id);if(error)return toast(error.message);await loadAll()}
 async function deleteCommercial(id){const c=DB.commercials.find(x=>x.id===id);if(!c)return;const hasClients=DB.clients.some(x=>x.commercial_id===id);const hasProjects=DB.projects.some(x=>x.commercial_id===id);if(hasClients||hasProjects){alert('No se puede eliminar porque tiene clientes o proyectos asociados. Se puede inactivar.');return;}if(!confirm(`¿Eliminar comercial ${c.name}?`))return;const {error}=await db.from('commercials').delete().eq('id',id);if(error)return toast(error.message);await loadAll()}
 function norm(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-–—]/g,' ').replace(/\s+/g,' ')}
+const expandedAnalystProjects=new Set();
+function toggleAnalystProjects(analystId){
+  if(expandedAnalystProjects.has(analystId))expandedAnalystProjects.delete(analystId);else expandedAnalystProjects.add(analystId);
+  renderAnalystProjectCounts(dashboardProjects());
+}
 function renderAnalystProjectCounts(projects=DB.projects){
   const box=document.getElementById('analystProjectCounts');if(!box)return;
   const allowed=new Set(projects.map(p=>p.id));
   const rows=DB.analysts.filter(a=>(a.status||'Activo')==='Activo').map(a=>{
-    const asg=DB.assignments.filter(x=>x.analyst_id===a.id&&allowed.has(x.project_id));
-    const leader=new Set(asg.filter(x=>x.role==='Líder').map(x=>x.project_id)).size;
-    const support=new Set(asg.filter(x=>x.role!=='Líder').map(x=>x.project_id)).size;
-    const total=new Set(asg.map(x=>x.project_id)).size;
-    return {name:a.name,leader,support,total};
+    const unique=new Map();
+    DB.assignments.filter(x=>x.analyst_id===a.id&&allowed.has(x.project_id)).forEach(x=>{
+      const p=DB.projects.find(pr=>pr.id===x.project_id);if(!p)return;
+      const current=unique.get(p.id);
+      if(!current||x.role==='Líder')unique.set(p.id,{project:p,role:x.role==='Líder'?'Líder':'Apoyo'});
+    });
+    const assignments=[...unique.values()].sort((x,y)=>String(x.project.clients?.name||'').localeCompare(String(y.project.clients?.name||''))||String(x.project.name||'').localeCompare(String(y.project.name||'')));
+    const leader=assignments.filter(x=>x.role==='Líder').length;
+    const support=assignments.filter(x=>x.role!=='Líder').length;
+    return {id:a.id,name:a.name,leader,support,total:assignments.length,assignments};
   }).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
-  box.innerHTML=rows.map(r=>`<div class="analyst-count-row"><strong>${esc(r.name)}</strong><span>${r.total} proyectos</span><small>Líder: ${r.leader} · Apoyo: ${r.support}</small></div>`).join('')||'<small>Sin asignaciones.</small>';
+  box.innerHTML=rows.map(r=>{
+    const open=expandedAnalystProjects.has(r.id);
+    const detail=r.assignments.length?r.assignments.map(x=>`<div class="analyst-project-item"><span>${esc(x.project.clients?.name||DB.clients.find(c=>c.id===x.project.client_id)?.name||'-')}</span><strong>${esc(x.project.name||'-')}</strong><span class="badge ${x.role==='Líder'?'green':'amber'}">${esc(x.role)}</span><span class="badge">${esc(normalizeProjectStatus(x.project.status)||'Sin estado')}</span></div>`).join(''):'<div class="analyst-project-empty">Sin proyectos asignados.</div>';
+    return `<div class="analyst-count-card ${open?'open':''}"><button type="button" class="analyst-count-row" onclick="toggleAnalystProjects('${r.id}')" aria-expanded="${open}"><strong>${esc(r.name)}</strong><span>${r.total} proyectos <b class="analyst-chevron">${open?'▴':'▾'}</b></span><small>Líder: ${r.leader} · Apoyo: ${r.support}</small></button><div class="analyst-project-list" ${open?'':'hidden'}><div class="analyst-project-head"><span>Cliente</span><span>Proyecto</span><span>Rol</span><span>Estado</span></div>${detail}</div></div>`;
+  }).join('')||'<small>Sin asignaciones.</small>';
 }
 function renderAnalysts(){analystsTable.innerHTML=DB.analysts.map(a=>{const p=new Set(DB.loads.filter(l=>l.analyst_id===a.id).map(l=>l.project_id)).size;return `<tr><td><strong>${esc(a.name)}</strong></td><td>${esc(a.email||'-')}</td><td>${esc(a.role||'-')}</td><td>${Math.round(num(a.weekly_capacity||44))}</td><td>${p}</td><td><span class="badge ${a.status==='Activo'?'green':'red'}">${esc(a.status||'-')}</span></td><td class="actions"><button class="mini-btn" onclick="editAnalyst('${a.id}')">Editar</button><button class="mini-btn delete" onclick="disableAnalyst('${a.id}')">Inactivar</button><button class="mini-btn danger" onclick="deleteAnalyst('${a.id}')">Eliminar</button></td></tr>`}).join('')}
 async function saveAnalyst(){const id=analystId.value;const payload={name:v('analystName'),email:v('analystEmail'),role:v('analystRole'),weekly_capacity:Math.round(num(v('analystCapacity')||44)),status:v('analystStatus')};if(!payload.name)return toast('Nombre requerido');const r=id?await db.from('analysts').update(payload).eq('id',id):await db.from('analysts').insert([payload]);if(r.error)return toast(r.error.message);clearAnalyst();await loadAll()}
