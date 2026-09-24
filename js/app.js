@@ -122,7 +122,7 @@ async function ensureProfile(){
   }
 }
 
-function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],time:['Registro de Horas','Carga real de horas por proyecto, permiso, vacaciones e interno'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
+function setupNav(){document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active');const t={dashboard:['Dashboard Ejecutivo','Cartera, capacidad semanal y alertas automáticas'],clients:['Clientes','Administración de clientes maestros'],commercials:['Comerciales','Administración de comerciales'],analysts:['Analistas','Capacidad y carga del equipo'],projects:['Proyectos','Tabla dinámica de cartera'],load:['Cargabilidad','Proyección semanal editable'],weeks:['Semanas','Administración de semanas'],reports:['Reportes','Consultores, proyectos, horas y avance'],time:['Registro de Horas','Carga real de horas por proyecto, permiso, vacaciones e interno'],talent:['Talento y Desempeño','Evaluación por consultor, producción y cuadrante'],users:['Usuarios','Administración de accesos y permisos']};pageTitle.textContent=t[b.dataset.view][0];pageSubtitle.textContent=t[b.dataset.view][1];});}
 function applyPermissions(){document.querySelectorAll('.nav').forEach(b=>{const p=b.dataset.permission;if(p&&!currentProfile?.[p])b.classList.add('hidden');else b.classList.remove('hidden');});const first=document.querySelector('.nav:not(.hidden)');if(first){document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));first.classList.add('active');document.getElementById(first.dataset.view).classList.add('active');}}
 async function loadAll(){try{
   const [countries,commercials,clients,analysts,projects,weeks,loads,roles,users,assignments,performanceReviews,performanceAnswers,performanceActionPlans,analystCertifications,analystWeeklyHours,analystAwarenessTraining,analystCertificationGoals,analystDevelopmentGoals,analystMonthlyHours,timeEntryTypes,timeEntries]=await Promise.all([
@@ -152,7 +152,7 @@ async function loadAll(){try{
   DB={countries:countries.data||[],commercials:commercials.data||[],clients:clients.data||[],analysts:analysts.data||[],projects:projects.data||[],weeks:weeks.data||[],loads:loads.data||[],roles:roles.data||[],users:users.data||[],assignments:assignments.data||[],performanceReviews:performanceReviews.data||[],performanceAnswers:performanceAnswers.data||[],performanceActionPlans:performanceActionPlans.data||[],analystCertifications:analystCertifications.data||[],analystWeeklyHours:analystWeeklyHours.data||[],analystAwarenessTraining:analystAwarenessTraining.data||[],analystCertificationGoals:analystCertificationGoals.data||[],analystDevelopmentGoals:analystDevelopmentGoals.data||[],analystMonthlyHours:analystMonthlyHours.data||[],timeEntryTypes:timeEntryTypes.data||[],timeEntries:timeEntries.data||[]};
   buildLoadRows();renderAll();toast('Datos cargados');
 }catch(e){console.error(e);toast('Error: '+e.message)}}
-function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderTimeEntries();renderMonthlyHours();renderTalent();renderUsers();renderSidebarStatusWidget();}
+function renderAll(){fillSelects();renderDashboard();renderClients();renderCommercials();renderAnalysts();renderProjects();renderLoadMatrix();renderWeeks();renderReports();renderTimeEntries();renderMonthlyHours();renderTalent();renderUsers();renderSidebarStatusWidget();}
 function fillSelects(){
   fill('clientCountry',DB.countries,'País','code',x=>countryLabel(x.code));fill('clientCommercial',activeCommercials(),'Comercial','id',x=>x.name);
   fill('userRole',DB.roles,'Rol','id',x=>x.name);
@@ -1417,6 +1417,67 @@ async function deleteProject(id){
   }catch(e){console.error('Error eliminando proyecto:',e);toast('No se pudo eliminar el proyecto: '+e.message)}
 }
 function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))})).sort((a,b)=>{const avA=Math.min(...a.values.map(v=>a.capacity-v.hours));const avB=Math.min(...b.values.map(v=>b.capacity-v.hours));return avB-avA||a.name.localeCompare(b.name);})}
+
+
+// V32 - Modulo de Reportes
+let expandedReportAnalysts=new Set();
+function fillReportFilters(){
+  const a=document.getElementById('reportAnalyst'),c=document.getElementById('reportClient'),st=document.getElementById('reportStatus');
+  if(!a||!c||!st)return;
+  const av=a.value,cv=c.value,sv=st.value;
+  a.innerHTML='<option value="">Consultor: Todos</option>'+DB.analysts.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  c.innerHTML='<option value="">Cliente: Todos</option>'+DB.clients.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  const statuses=[...new Set(DB.projects.map(p=>normalizeProjectStatus(p.status)).filter(Boolean))].sort();
+  st.innerHTML='<option value="">Estado: Todos</option>'+statuses.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  if([...a.options].some(o=>o.value===av))a.value=av;if([...c.options].some(o=>o.value===cv))c.value=cv;if([...st.options].some(o=>o.value===sv))st.value=sv;
+}
+function reportRows(){
+  fillReportFilters();
+  const q=(v('reportSearch')||'').toLowerCase(),aid=v('reportAnalyst'),cid=v('reportClient'),status=v('reportStatus'),role=v('reportRole'),from=v('reportFrom'),to=v('reportTo');
+  const projectMap=new Map(DB.projects.map(p=>[p.id,p]));
+  return DB.assignments.map(asg=>{
+    const p=projectMap.get(asg.project_id),a=DB.analysts.find(x=>x.id===asg.analyst_id);if(!p||!a)return null;
+    const client=DB.clients.find(x=>x.id===p.client_id),r=asg.role==='Líder'?'Líder':'Apoyo',st=normalizeProjectStatus(p.status)||'Sin estado';
+    const entries=(DB.timeEntries||[]).filter(e=>e.analyst_id===a.id&&e.project_id===p.id&&(!from||String(e.entry_date||'')>=from)&&(!to||String(e.entry_date||'')<=to));
+    const consultantHours=entries.reduce((sum,e)=>sum+num(e.hours),0);
+    return {assignment:asg,analyst:a,project:p,client,role:r,status:st,consultantHours};
+  }).filter(Boolean).filter(x=>(!aid||x.analyst.id===aid)&&(!cid||x.project.client_id===cid)&&(!status||x.status===status)&&(!role||x.role===role)&&(!q||[x.analyst.name,x.client?.name,x.project.name,x.status,x.role].join(' ').toLowerCase().includes(q)));
+}
+function uniqueReportProjects(rows){const m=new Map();rows.forEach(x=>m.set(x.project.id,x.project));return [...m.values()]}
+function setText(id,val){const e=document.getElementById(id);if(e)e.textContent=val}
+function renderReports(){
+  if(!document.getElementById('reports'))return;
+  const rows=reportRows(),projects=uniqueReportProjects(rows),analysts=new Set(rows.map(x=>x.analyst.id));
+  const active=projects.filter(p=>normalizeProjectStatus(p.status)==='En ejecución').length,paused=projects.filter(p=>normalizeProjectStatus(p.status)==='En pausa').length,finished=projects.filter(p=>normalizeProjectStatus(p.status)==='Finalizado').length;
+  const hours=rows.reduce((s,x)=>s+x.consultantHours,0),progress=projects.length?projects.reduce((s,p)=>s+num(p.progress_percent),0)/projects.length:0;
+  setText('reportKpiAnalysts',analysts.size);setText('reportKpiProjects',projects.length);setText('reportKpiActive',active);setText('reportKpiPaused',paused);setText('reportKpiFinished',finished);setText('reportKpiHours',`${Math.round(hours*10)/10}h`);setText('reportKpiProgress',`${Math.round(progress)}%`);
+  renderReportStatusChart(projects);renderReportAnalystChart(rows);renderReportProgressChart(projects);renderReportConsultants(rows);
+}
+function renderReportStatusChart(projects){
+  const box=document.getElementById('reportStatusChart');if(!box)return;const counts={};projects.forEach(p=>{const st=normalizeProjectStatus(p.status)||'Sin estado';counts[st]=(counts[st]||0)+1});const max=Math.max(1,...Object.values(counts));
+  box.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([st,n])=>`<div class="report-bar-row"><span>${esc(st)}</span><div class="report-bar-track"><i style="width:${n/max*100}%"></i></div><b>${n}</b></div>`).join('')||'<small>Sin proyectos para los filtros seleccionados.</small>';
+}
+function renderReportAnalystChart(rows){
+  const box=document.getElementById('reportAnalystChart');if(!box)return;const m=new Map();rows.forEach(x=>{const r=m.get(x.analyst.id)||{name:x.analyst.name,leader:new Set(),support:new Set()};(x.role==='Líder'?r.leader:r.support).add(x.project.id);m.set(x.analyst.id,r)});const vals=[...m.values()].map(x=>({...x,l:x.leader.size,s:x.support.size,total:new Set([...x.leader,...x.support]).size})).sort((a,b)=>b.total-a.total);const max=Math.max(1,...vals.map(x=>x.total));
+  box.innerHTML=vals.map(x=>`<div class="report-bar-row analyst"><span><strong>${esc(x.name)}</strong><small>${x.total} proyectos</small></span><div class="report-bar-track split"><i class="leader" style="width:${x.l/max*100}%"></i><i class="support" style="width:${x.s/max*100}%"></i></div><b>${x.l}L · ${x.s}A</b></div>`).join('')||'<small>Sin consultores para los filtros seleccionados.</small>';
+}
+function renderReportProgressChart(projects){
+  const box=document.getElementById('reportProgressChart');if(!box)return;const sorted=projects.slice().sort((a,b)=>Math.abs(percent(b)-num(b.progress_percent))-Math.abs(percent(a)-num(a.progress_percent))).slice(0,15);
+  box.innerHTML=sorted.map(p=>{const hp=Math.round(percent(p)),ap=Math.round(num(p.progress_percent)),gap=ap-hp;return `<div class="report-progress-card"><div class="report-progress-title"><div><strong>${esc(p.name)}</strong><small>${esc(p.clients?.name||DB.clients.find(c=>c.id===p.client_id)?.name||'-')} · ${esc(normalizeProjectStatus(p.status)||'-')}</small></div><span class="gap-pill ${gap<0?'negative':'positive'}">${gap>0?'+':''}${gap} pp</span></div><div class="report-progress-line"><span>Horas</span><div><i class="hours" style="width:${Math.min(hp,100)}%"></i></div><b>${hp}%</b></div><div class="report-progress-line"><span>Avance</span><div><i class="progress" style="width:${Math.min(ap,100)}%"></i></div><b>${ap}%</b></div></div>`}).join('')||'<small>Sin proyectos para comparar.</small>';
+}
+function toggleReportAnalyst(id){expandedReportAnalysts.has(id)?expandedReportAnalysts.delete(id):expandedReportAnalysts.add(id);renderReports()}
+function renderReportConsultants(rows){
+  const box=document.getElementById('reportConsultantDetail');if(!box)return;const m=new Map();rows.forEach(x=>{if(!m.has(x.analyst.id))m.set(x.analyst.id,{analyst:x.analyst,rows:[]});m.get(x.analyst.id).rows.push(x)});
+  box.innerHTML=[...m.values()].sort((a,b)=>a.analyst.name.localeCompare(b.analyst.name)).map(g=>{const unique=new Map();g.rows.forEach(x=>{const prev=unique.get(x.project.id);if(!prev||x.role==='Líder')unique.set(x.project.id,x)});const rr=[...unique.values()],open=expandedReportAnalysts.has(g.analyst.id),hrs=g.rows.reduce((s,x)=>s+x.consultantHours,0),fin=rr.filter(x=>x.status==='Finalizado').length,pause=rr.filter(x=>x.status==='En pausa').length,active=rr.filter(x=>x.status==='En ejecución').length;return `<div class="report-consultant-card"><button class="report-consultant-head" onclick="toggleReportAnalyst('${g.analyst.id}')"><span><strong>${esc(g.analyst.name)}</strong><small>${rr.length} proyectos · ${Math.round(hrs*10)/10}h registradas</small></span><span class="report-status-mini"><b>${active}</b> ejecución <b>${pause}</b> pausa <b>${fin}</b> finalizados</span><b>${open?'▴':'▾'}</b></button><div class="report-detail" ${open?'':'hidden'}><div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Proyecto</th><th>Rol</th><th>Estado</th><th>Horas consultor</th><th>Horas proyecto</th><th>% Horas</th><th>% Avance</th><th>Desviación</th></tr></thead><tbody>${rr.map(x=>{const hp=Math.round(percent(x.project)),ap=Math.round(num(x.project.progress_percent)),gap=ap-hp;return `<tr><td>${esc(x.client?.name||'-')}</td><td><strong>${esc(x.project.name)}</strong></td><td><span class="badge ${x.role==='Líder'?'green':'amber'}">${esc(x.role)}</span></td><td><span class="badge">${esc(x.status)}</span></td><td>${Math.round(x.consultantHours*10)/10}h</td><td>${Math.round(num(x.project.consumed_hours)*10)/10}h</td><td>${hp}%</td><td>${ap}%</td><td><span class="gap-pill ${gap<0?'negative':'positive'}">${gap>0?'+':''}${gap} pp</span></td></tr>`}).join('')}</tbody></table></div></div></div>`}).join('')||'<small>Sin información para los filtros seleccionados.</small>';
+}
+function clearReportFilters(){['reportSearch','reportAnalyst','reportClient','reportStatus','reportRole','reportFrom','reportTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});renderReports()}
+function exportReportsCSV(){
+  const rows=reportRows();if(!rows.length)return toast('No hay datos para exportar');
+  const head=['Consultor','Cliente','Proyecto','Rol','Estado','Horas consultor','Horas proyecto','% Horas','% Avance','Desviacion pp'];
+  const data=rows.map(x=>{const hp=Math.round(percent(x.project)),ap=Math.round(num(x.project.progress_percent));return [x.analyst.name,x.client?.name||'',x.project.name,x.role,x.status,Math.round(x.consultantHours*10)/10,Math.round(num(x.project.consumed_hours)*10)/10,hp,ap,ap-hp]});
+  const csv=[head,...data].map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`SISAP_Reportes_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
+}
+
 function isActiveLoad(load){return isLoadableProject(load.projects)&&DB.assignments.some(a=>a.analyst_id===load.analyst_id&&a.project_id===load.project_id)}
 function sumWeek(wid){return DB.loads.filter(l=>l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}
 function sumAnalystWeek(aid,wid){return DB.loads.filter(l=>l.analyst_id===aid&&l.week_id===wid&&isActiveLoad(l)).reduce((s,l)=>s+num(l.planned_hours),0)}

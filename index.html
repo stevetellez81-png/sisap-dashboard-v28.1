@@ -30,6 +30,7 @@
       <button class="nav" data-view="projects" data-permission="can_projects">▤ Proyectos</button>
       <button class="nav" data-view="load" data-permission="can_load">▥ Cargabilidad</button>
       <button class="nav" data-view="weeks" data-permission="can_weeks">◷ Semanas</button>
+      <button class="nav" data-view="reports" data-permission="can_projects">▧ Reportes</button>
       
       <button class="nav" data-view="talent" data-permission="can_analysts">✦ Talento</button>
       <button class="nav" data-view="users" data-permission="can_users">⚙ Usuarios</button>
@@ -129,6 +130,40 @@
 
 
 
+
+
+    <section id="reports" class="view">
+      <div class="panel reports-hero">
+        <div><div class="eyebrow">Gestión y seguimiento</div><h3>Reportes de Consultores y Proyectos</h3><p class="muted">Vista consolidada de asignaciones, estados, horas consumidas y avance real de proyectos.</p></div>
+        <div class="report-actions"><button class="btn ghost" type="button" onclick="clearReportFilters()">⌫ Limpiar filtros</button><button class="btn dark" type="button" onclick="exportReportsCSV()">⇩ Exportar CSV</button><button class="btn red" type="button" onclick="window.print()">⎙ Imprimir / PDF</button></div>
+      </div>
+      <div class="panel report-filter-panel">
+        <div class="report-filters">
+          <input id="reportSearch" oninput="renderReports()" placeholder="Buscar consultor, cliente o proyecto...">
+          <select id="reportAnalyst" onchange="renderReports()"></select>
+          <select id="reportClient" onchange="renderReports()"></select>
+          <select id="reportStatus" onchange="renderReports()"></select>
+          <select id="reportRole" onchange="renderReports()"><option value="">Rol: Todos</option><option value="Líder">Líder</option><option value="Apoyo">Apoyo</option></select>
+          <label class="report-date">Desde<input id="reportFrom" type="date" onchange="renderReports()"></label>
+          <label class="report-date">Hasta<input id="reportTo" type="date" onchange="renderReports()"></label>
+        </div>
+      </div>
+      <div class="kpis report-kpis">
+        <div class="kpi"><span>Consultores</span><strong id="reportKpiAnalysts">0</strong><small>Con asignaciones</small></div>
+        <div class="kpi"><span>Proyectos asignados</span><strong id="reportKpiProjects">0</strong><small>Proyectos únicos</small></div>
+        <div class="kpi"><span>En ejecución</span><strong id="reportKpiActive">0</strong><small>Estado actual</small></div>
+        <div class="kpi warning"><span>En pausa</span><strong id="reportKpiPaused">0</strong><small>Requieren seguimiento</small></div>
+        <div class="kpi"><span>Finalizados</span><strong id="reportKpiFinished">0</strong><small>Cerrados</small></div>
+        <div class="kpi"><span>Horas consumidas</span><strong id="reportKpiHours">0h</strong><small>Registro de consultores</small></div>
+        <div class="kpi"><span>Avance promedio</span><strong id="reportKpiProgress">0%</strong><small>Proyectos filtrados</small></div>
+      </div>
+      <div class="grid-2 report-charts">
+        <div class="panel"><div class="panel-title"><div><h3>Proyectos por estado</h3><small>Distribución de la cartera filtrada</small></div></div><div id="reportStatusChart" class="report-chart"></div></div>
+        <div class="panel"><div class="panel-title"><div><h3>Proyectos por consultor</h3><small>Asignados por rol Líder / Apoyo</small></div></div><div id="reportAnalystChart" class="report-chart"></div></div>
+      </div>
+      <div class="panel"><div class="panel-title"><div><h3>Consumo de horas vs. avance</h3><small>Detecta proyectos donde el esfuerzo consumido supera el progreso reportado</small></div></div><div id="reportProgressChart" class="report-progress-grid"></div></div>
+      <div class="panel"><div class="panel-title"><div><h3>Detalle por consultor</h3><small>Haga clic en un consultor para ver sus proyectos</small></div></div><div id="reportConsultantDetail" class="report-consultants"></div></div>
+    </section>
 
     <section id="time" class="view">
       <div class="panel talent-hero">
