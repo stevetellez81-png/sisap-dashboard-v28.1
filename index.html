@@ -142,7 +142,10 @@
           <input id="reportSearch" oninput="renderReports()" placeholder="Buscar consultor, cliente o proyecto...">
           <select id="reportAnalyst" onchange="renderReports()"></select>
           <select id="reportClient" onchange="renderReports()"></select>
-          <select id="reportStatus" onchange="renderReports()"></select>
+          <div class="report-multiselect" id="reportStatusMulti">
+            <button id="reportStatusButton" class="report-multiselect-button" type="button" onclick="toggleReportStatusMenu(event)">Estado: Todos <span>▾</span></button>
+            <div id="reportStatusMenu" class="report-multiselect-menu" hidden></div>
+          </div>
           <select id="reportRole" onchange="renderReports()"><option value="">Rol: Todos</option><option value="Líder">Líder</option><option value="Apoyo">Apoyo</option></select>
           <label class="report-date">Desde<input id="reportFrom" type="date" onchange="renderReports()"></label>
           <label class="report-date">Hasta<input id="reportTo" type="date" onchange="renderReports()"></label>
