@@ -955,3 +955,18 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 /* V32.1 - filtro multiestado en Reportes */
 .report-multiselect{position:relative;min-width:0}.report-multiselect-button{width:100%;min-height:38px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 10px;display:flex;align-items:center;justify-content:space-between;text-align:left;color:var(--text);cursor:pointer}.report-multiselect-menu{position:absolute;z-index:60;top:calc(100% + 6px);left:0;min-width:230px;max-height:280px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(18,24,38,.14);padding:8px}.report-multiselect-menu[hidden]{display:none}.report-multiselect-menu label{display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;cursor:pointer;font-size:12px}.report-multiselect-menu label:hover{background:#f6f7f9}.report-multiselect-menu input{accent-color:#d93636}.report-multiselect-top{display:flex;align-items:center;justify-content:space-between;padding:5px 7px 8px;border-bottom:1px solid #eef0f3;margin-bottom:4px}.report-multiselect-top button{border:0;background:transparent;color:#d93636;font-weight:700;cursor:pointer}.report-filters>.report-multiselect{width:100%}
+
+/* V32.2 - correccion visual del filtro multiestado */
+.report-filter-panel{position:relative;z-index:120;overflow:visible!important}
+.report-multiselect{position:relative;z-index:121}
+.report-multiselect-menu{z-index:9999!important;width:max(100%,260px);min-width:260px;overflow-y:auto;overflow-x:hidden}
+.report-multiselect-menu label{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:10px;min-height:36px;padding:8px 10px}
+.report-multiselect-menu label input[type="checkbox"]{width:16px!important;height:16px!important;min-width:16px!important;margin:0!important;padding:0!important}
+.report-multiselect-menu label span{display:block;white-space:normal;line-height:1.25}
+.report-multiselect-top{position:sticky;top:-8px;background:#fff;z-index:2}
+.report-kpis{position:relative;z-index:1}
+
+/* V32.3 - filtros multiseleccion en Reportes */
+.report-multi-search{width:100%!important;box-sizing:border-box!important;margin:2px 0 6px!important;min-height:34px!important;border:1px solid var(--line)!important;border-radius:8px!important;padding:6px 9px!important;font-size:12px!important}
+.report-filters>.report-multiselect{min-width:0;width:100%}
+.report-multiselect-button span{flex:0 0 auto;margin-left:8px}

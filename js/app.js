@@ -1419,40 +1419,41 @@ async function deleteProject(id){
 function capacityRows(weeks){return DB.analysts.filter(a=>a.status==='Activo').map(a=>({id:a.id,name:a.name,capacity:num(a.weekly_capacity||44),values:weeks.map(w=>({week:w.week_label,hours:sumAnalystWeek(a.id,w.id)}))})).sort((a,b)=>{const avA=Math.min(...a.values.map(v=>a.capacity-v.hours));const avB=Math.min(...b.values.map(v=>b.capacity-v.hours));return avB-avA||a.name.localeCompare(b.name);})}
 
 
-// V32 - Modulo de Reportes
+// V32.3 - Modulo de Reportes con filtros multiseleccion
 let expandedReportAnalysts=new Set();
+let reportAnalystFilter=new Set();
+let reportClientFilter=new Set();
 let reportStatusFilter=new Set();
-function toggleReportStatusMenu(ev){
+let reportRoleFilter=new Set();
+const reportFilterCfg={
+  analyst:{label:'Consultor',title:'Consultores',state:()=>reportAnalystFilter,items:()=>DB.analysts.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(a=>({value:String(a.id),text:a.name||'Sin nombre'}))},
+  client:{label:'Cliente',title:'Clientes',state:()=>reportClientFilter,items:()=>DB.clients.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(c=>({value:String(c.id),text:c.name||'Sin nombre'}))},
+  status:{label:'Estado',title:'Estados',state:()=>reportStatusFilter,items:()=>[...new Set(DB.projects.map(p=>normalizeProjectStatus(p.status)).filter(Boolean))].sort().map(x=>({value:x,text:x}))},
+  role:{label:'Rol',title:'Roles',state:()=>reportRoleFilter,items:()=>[{value:'Líder',text:'Líder'},{value:'Apoyo',text:'Apoyo'}]}
+};
+function reportCap(k){return k.charAt(0).toUpperCase()+k.slice(1)}
+function toggleReportMultiMenu(ev,key){
   if(ev)ev.stopPropagation();
-  const menu=document.getElementById('reportStatusMenu');if(!menu)return;
-  menu.hidden=!menu.hidden;
+  Object.keys(reportFilterCfg).forEach(k=>{const m=document.getElementById(`report${reportCap(k)}Menu`);if(m&&k!==key)m.hidden=true});
+  const menu=document.getElementById(`report${reportCap(key)}Menu`);if(menu)menu.hidden=!menu.hidden;
 }
-function setReportStatusFilter(status,checked){
-  if(checked)reportStatusFilter.add(status);else reportStatusFilter.delete(status);
-  updateReportStatusControl();renderReports();
+function setReportMultiFilter(key,value,checked){
+  const state=reportFilterCfg[key]?.state();if(!state)return;
+  checked?state.add(value):state.delete(value);updateReportMultiControl(key);renderReports();
 }
-function clearReportStatusFilter(){reportStatusFilter.clear();updateReportStatusControl();renderReports()}
-function updateReportStatusControl(){
-  const btn=document.getElementById('reportStatusButton'),menu=document.getElementById('reportStatusMenu');if(!btn||!menu)return;
-  const statuses=[...new Set(DB.projects.map(p=>normalizeProjectStatus(p.status)).filter(Boolean))].sort();
-  const valid=new Set(statuses);reportStatusFilter=new Set([...reportStatusFilter].filter(x=>valid.has(x)));
-  const n=reportStatusFilter.size;
-  btn.innerHTML=`${n?`Estado: ${n} seleccionado${n===1?'':'s'}`:'Estado: Todos'} <span>▾</span>`;
-  menu.innerHTML=`<div class="report-multiselect-top"><strong>Estados</strong><button type="button" onclick="clearReportStatusFilter()">Todos</button></div>`+statuses.map(st=>`<label><input type="checkbox" data-status="${encodeURIComponent(st)}" ${reportStatusFilter.has(st)?'checked':''} onchange="setReportStatusFilter(decodeURIComponent(this.dataset.status),this.checked)"><span>${esc(st)}</span></label>`).join('');
+function clearReportMultiFilter(key){const state=reportFilterCfg[key]?.state();if(!state)return;state.clear();updateReportMultiControl(key);renderReports()}
+function updateReportMultiControl(key){
+  const cfg=reportFilterCfg[key];if(!cfg)return;const cap=reportCap(key),btn=document.getElementById(`report${cap}Button`),menu=document.getElementById(`report${cap}Menu`);if(!btn||!menu)return;
+  const items=cfg.items(),valid=new Set(items.map(x=>x.value)),state=cfg.state();[...state].forEach(x=>{if(!valid.has(x))state.delete(x)});
+  const n=state.size;btn.innerHTML=`${n?`${cfg.label}: ${n} seleccionado${n===1?'':'s'}`:`${cfg.label}: Todos`} <span>▾</span>`;
+  menu.innerHTML=`<div class="report-multiselect-top"><strong>${esc(cfg.title)}</strong><button type="button" onclick="clearReportMultiFilter('${key}')">Todos</button></div><input class="report-multi-search" placeholder="Buscar ${esc(cfg.label.toLowerCase())}..." oninput="filterReportMultiOptions(this)">`+items.map(it=>`<label><input type="checkbox" data-value="${encodeURIComponent(it.value)}" ${state.has(it.value)?'checked':''} onchange="setReportMultiFilter('${key}',decodeURIComponent(this.dataset.value),this.checked)"><span>${esc(it.text)}</span></label>`).join('');
 }
-document.addEventListener('click',e=>{const wrap=document.getElementById('reportStatusMulti'),menu=document.getElementById('reportStatusMenu');if(wrap&&menu&&!wrap.contains(e.target))menu.hidden=true});
-function fillReportFilters(){
-  const a=document.getElementById('reportAnalyst'),c=document.getElementById('reportClient');
-  if(!a||!c)return;
-  const av=a.value,cv=c.value;
-  a.innerHTML='<option value="">Consultor: Todos</option>'+DB.analysts.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-  c.innerHTML='<option value="">Cliente: Todos</option>'+DB.clients.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-  if([...a.options].some(o=>o.value===av))a.value=av;if([...c.options].some(o=>o.value===cv))c.value=cv;
-  updateReportStatusControl();
-}
+function filterReportMultiOptions(input){const q=(input.value||'').toLowerCase();input.closest('.report-multiselect-menu').querySelectorAll('label').forEach(x=>x.style.display=x.textContent.toLowerCase().includes(q)?'grid':'none')}
+function fillReportFilters(){Object.keys(reportFilterCfg).forEach(updateReportMultiControl)}
+document.addEventListener('click',e=>{document.querySelectorAll('.report-multiselect-menu').forEach(menu=>{const wrap=menu.closest('.report-multiselect');if(wrap&&!wrap.contains(e.target))menu.hidden=true})});
 function reportRows(){
   fillReportFilters();
-  const q=(v('reportSearch')||'').toLowerCase(),aid=v('reportAnalyst'),cid=v('reportClient'),role=v('reportRole'),from=v('reportFrom'),to=v('reportTo');
+  const q=(v('reportSearch')||'').toLowerCase(),from=v('reportFrom'),to=v('reportTo');
   const projectMap=new Map(DB.projects.map(p=>[p.id,p]));
   return DB.assignments.map(asg=>{
     const p=projectMap.get(asg.project_id),a=DB.analysts.find(x=>x.id===asg.analyst_id);if(!p||!a)return null;
@@ -1460,7 +1461,7 @@ function reportRows(){
     const entries=(DB.timeEntries||[]).filter(e=>e.analyst_id===a.id&&e.project_id===p.id&&(!from||String(e.entry_date||'')>=from)&&(!to||String(e.entry_date||'')<=to));
     const consultantHours=entries.reduce((sum,e)=>sum+num(e.hours),0);
     return {assignment:asg,analyst:a,project:p,client,role:r,status:st,consultantHours};
-  }).filter(Boolean).filter(x=>(!aid||x.analyst.id===aid)&&(!cid||x.project.client_id===cid)&&(!reportStatusFilter.size||reportStatusFilter.has(x.status))&&(!role||x.role===role)&&(!q||[x.analyst.name,x.client?.name,x.project.name,x.status,x.role].join(' ').toLowerCase().includes(q)));
+  }).filter(Boolean).filter(x=>(!reportAnalystFilter.size||reportAnalystFilter.has(String(x.analyst.id)))&&(!reportClientFilter.size||reportClientFilter.has(String(x.project.client_id)))&&(!reportStatusFilter.size||reportStatusFilter.has(x.status))&&(!reportRoleFilter.size||reportRoleFilter.has(x.role))&&(!q||[x.analyst.name,x.client?.name,x.project.name,x.status,x.role].join(' ').toLowerCase().includes(q)));
 }
 function uniqueReportProjects(rows){const m=new Map();rows.forEach(x=>m.set(x.project.id,x.project));return [...m.values()]}
 function setText(id,val){const e=document.getElementById(id);if(e)e.textContent=val}
@@ -1489,7 +1490,7 @@ function renderReportConsultants(rows){
   const box=document.getElementById('reportConsultantDetail');if(!box)return;const m=new Map();rows.forEach(x=>{if(!m.has(x.analyst.id))m.set(x.analyst.id,{analyst:x.analyst,rows:[]});m.get(x.analyst.id).rows.push(x)});
   box.innerHTML=[...m.values()].sort((a,b)=>a.analyst.name.localeCompare(b.analyst.name)).map(g=>{const unique=new Map();g.rows.forEach(x=>{const prev=unique.get(x.project.id);if(!prev||x.role==='Líder')unique.set(x.project.id,x)});const rr=[...unique.values()],open=expandedReportAnalysts.has(g.analyst.id),hrs=g.rows.reduce((s,x)=>s+x.consultantHours,0),fin=rr.filter(x=>x.status==='Finalizado').length,pause=rr.filter(x=>x.status==='En pausa').length,active=rr.filter(x=>x.status==='En ejecución').length;return `<div class="report-consultant-card"><button class="report-consultant-head" onclick="toggleReportAnalyst('${g.analyst.id}')"><span><strong>${esc(g.analyst.name)}</strong><small>${rr.length} proyectos · ${Math.round(hrs*10)/10}h registradas</small></span><span class="report-status-mini"><b>${active}</b> ejecución <b>${pause}</b> pausa <b>${fin}</b> finalizados</span><b>${open?'▴':'▾'}</b></button><div class="report-detail" ${open?'':'hidden'}><div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Proyecto</th><th>Rol</th><th>Estado</th><th>Horas consultor</th><th>Horas proyecto</th><th>% Horas</th><th>% Avance</th><th>Desviación</th></tr></thead><tbody>${rr.map(x=>{const hp=Math.round(percent(x.project)),ap=Math.round(num(x.project.progress_percent)),gap=ap-hp;return `<tr><td>${esc(x.client?.name||'-')}</td><td><strong>${esc(x.project.name)}</strong></td><td><span class="badge ${x.role==='Líder'?'green':'amber'}">${esc(x.role)}</span></td><td><span class="badge">${esc(x.status)}</span></td><td>${Math.round(x.consultantHours*10)/10}h</td><td>${Math.round(num(x.project.consumed_hours)*10)/10}h</td><td>${hp}%</td><td>${ap}%</td><td><span class="gap-pill ${gap<0?'negative':'positive'}">${gap>0?'+':''}${gap} pp</span></td></tr>`}).join('')}</tbody></table></div></div></div>`}).join('')||'<small>Sin información para los filtros seleccionados.</small>';
 }
-function clearReportFilters(){['reportSearch','reportAnalyst','reportClient','reportRole','reportFrom','reportTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});reportStatusFilter.clear();updateReportStatusControl();renderReports()}
+function clearReportFilters(){['reportSearch','reportFrom','reportTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});reportAnalystFilter.clear();reportClientFilter.clear();reportStatusFilter.clear();reportRoleFilter.clear();fillReportFilters();renderReports()}
 function exportReportsCSV(){
   const rows=reportRows();if(!rows.length)return toast('No hay datos para exportar');
   const head=['Consultor','Cliente','Proyecto','Rol','Estado','Horas consultor','Horas proyecto','% Horas','% Avance','Desviacion pp'];

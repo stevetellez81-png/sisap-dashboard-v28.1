@@ -140,13 +140,13 @@
       <div class="panel report-filter-panel">
         <div class="report-filters">
           <input id="reportSearch" oninput="renderReports()" placeholder="Buscar consultor, cliente o proyecto...">
-          <select id="reportAnalyst" onchange="renderReports()"></select>
-          <select id="reportClient" onchange="renderReports()"></select>
+          <div class="report-multiselect" id="reportAnalystMulti"><button id="reportAnalystButton" class="report-multiselect-button" type="button" onclick="toggleReportMultiMenu(event,'analyst')">Consultor: Todos <span>▾</span></button><div id="reportAnalystMenu" class="report-multiselect-menu" hidden></div></div>
+          <div class="report-multiselect" id="reportClientMulti"><button id="reportClientButton" class="report-multiselect-button" type="button" onclick="toggleReportMultiMenu(event,'client')">Cliente: Todos <span>▾</span></button><div id="reportClientMenu" class="report-multiselect-menu" hidden></div></div>
           <div class="report-multiselect" id="reportStatusMulti">
             <button id="reportStatusButton" class="report-multiselect-button" type="button" onclick="toggleReportStatusMenu(event)">Estado: Todos <span>▾</span></button>
             <div id="reportStatusMenu" class="report-multiselect-menu" hidden></div>
           </div>
-          <select id="reportRole" onchange="renderReports()"><option value="">Rol: Todos</option><option value="Líder">Líder</option><option value="Apoyo">Apoyo</option></select>
+          <div class="report-multiselect" id="reportRoleMulti"><button id="reportRoleButton" class="report-multiselect-button" type="button" onclick="toggleReportMultiMenu(event,'role')">Rol: Todos <span>▾</span></button><div id="reportRoleMenu" class="report-multiselect-menu" hidden></div></div>
           <label class="report-date">Desde<input id="reportFrom" type="date" onchange="renderReports()"></label>
           <label class="report-date">Hasta<input id="reportTo" type="date" onchange="renderReports()"></label>
         </div>
